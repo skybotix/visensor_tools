@@ -27,11 +27,11 @@ rosparam load <path_to_your_camchain_yaml_file>
 ```
 To test the program, we attached an example camchain file to this repo. You can generate your own calibration using the framework [Kalibr](https://github.com/ethz-asl/kalibr).
 
-Send calibration to VI-Sensor:
+Send calibration to VI-Sensor **Please note that you will overwrite the factory calibration**:
 ```
 rosrun vi_calibration_flasher vi_calibration_flasher
 ```
-If you get a **Calibration upload succeeded!**, everything went smoothly. You can test the new calibration by starting the block-matcher launch file of the visensor_node. 
+If you get a *Calibration upload succeeded!*, everything went smoothly. You can test the new calibration by starting the block-matcher launch file of the visensor_node. If you managed to flash your sensor incidentally, but still want the factory calibration, contact support@skybotix.com .
 ```
 roslaunch visensor_node dense.launch
 ```
