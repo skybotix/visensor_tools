@@ -23,7 +23,6 @@ rosparam delete /vi_calibration_flasher
 ```
 Load calibration file:
 ```
-
 rosparam load <path_to_your_camchain_yaml_file>
 ```
 To test the program, we attached an example camchain file to this repo. You can generate your own calibration using the framework [Kalibr](https://github.com/ethz-asl/kalibr).
