@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+  <name>visensor_calibration_flasher</name>
+  <version>0.0.0</version>
+  <description>Flashes the VI Sensor given a Kalibr calibration file</description>
+  <maintainer email="sammy.omari@skybotix.com">Sammy Omari</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>libvisensor</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>libvisensor</run_depend>
+  <export>
+  </export>
+
+</package>

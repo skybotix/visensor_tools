@@ -29,8 +29,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-
 #include "SensorUpdater.hpp"
 
 #include <iostream>
