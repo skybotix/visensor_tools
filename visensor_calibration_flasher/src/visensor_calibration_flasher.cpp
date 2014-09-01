@@ -166,9 +166,8 @@ int main(int argc, char **argv)
       std::cout << "Calibration upload failed!\n";
       return 1;
     }
-    std::cout << "Calibration upload succeeded!\n"; 
   }
-
+  std::cout << "Calibration upload succeeded!\n"; 
   return 0;
 }
 

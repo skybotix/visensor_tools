@@ -32,3 +32,9 @@ Send calibration to VI-Sensor:
 ```
 rosrun vi_calibration_flasher vi_calibration_flasher
 ```
+If you get a **Calibration upload succeeded!**, everything went smoothly. You can test the new calibration by starting the block-matcher launch file of the visensor_node. 
+```
+roslaunch visensor_node dense.launch
+```
+If everything went smoothly, the rectified and disparity image should look fine (Rectified image: straight lines should be straight, also towards the image corners. Disparity image: If scene is sufficiently textured, disparity map should be dense and fairly outlier-free)
+
