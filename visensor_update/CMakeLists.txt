@@ -1,4 +1,4 @@
-#Thomas Schneider, 2/12/2013
+#Skybotix AG, 2/12/2013
 cmake_minimum_required(VERSION 2.8.0)
  
 ############
