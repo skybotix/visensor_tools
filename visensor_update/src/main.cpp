@@ -42,7 +42,6 @@ void printArgs(void)
 
     std::cout << "  Available commands are:" << std::endl;
     std::cout << "     update               updates the sensor to the newest on the online repo" << std::endl;
-    std::cout << "     update-develop       updates the sensor to the newest develop on the online repo" << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
@@ -126,7 +125,7 @@ int main(int argc, char** argv)
   std::map<std::string, commandFunction> argCmds =
   {
       {"update", cmdUpdate},
-      {"update-develop", cmdUpdateDevelop},
+      {"update-devel", cmdUpdateDevelop},
       {"clean", cmdClean},
       {"reboot", cmdReboot},
       {"version", cmdVersion},
