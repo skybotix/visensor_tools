@@ -1,6 +1,6 @@
 <launch>
+  <rosparam file="$(find vi_calibration_flasher)/camchain-imucam-example.yaml" />
   <node  name="vi_calibration_flasher" pkg="vi_calibration_flasher" type="vi_calibration_flasher" output="screen">
-    <rosparam file="$(find vi_calibration_flasher)/camchain-imucam-example.yaml" />
   </node>
 </launch>
 
