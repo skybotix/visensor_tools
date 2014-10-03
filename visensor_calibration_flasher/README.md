@@ -19,7 +19,7 @@ roscore
 ```
 Clear other calibrations, just to be sure:
 ```
-rosparam delete /vi_calibration_flasher
+rosparam delete /visensor_calibration_flasher
 ```
 Load calibration file:
 ```
@@ -29,7 +29,7 @@ To test the program, we attached an example camchain file to this repo. You can 
 
 Send calibration to VI-Sensor **Please note that you will overwrite the factory calibration**:
 ```
-rosrun vi_calibration_flasher vi_calibration_flasher
+rosrun visensor_calibration_flasher visensor_calibration_flasher
 ```
 If you get a *Calibration upload succeeded!*, everything went smoothly. You can test the new calibration by starting the block-matcher launch file of the visensor_node. If you managed to flash your sensor incidentally, but still want the factory calibration, contact support@skybotix.com .
 ```
