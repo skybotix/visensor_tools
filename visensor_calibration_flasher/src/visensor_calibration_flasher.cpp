@@ -112,6 +112,14 @@ int main(int argc, char **argv)
     assert(cam_params.hasMember("T_cam_imu"));
     XmlRpc::XmlRpcValue T_C_I;
 
+    bool flip_camera;
+    if (cam_params.hasMember("flip_camera")){
+      flip_camera = cam_params["flip_camera"];
+    }
+    else{
+      flip_camera = true;
+    }
+    std::cout << "flip_camera: " << flip_camera << std::endl;
     T_C_I = cam_params["T_cam_imu"];
     //EIGEN USES COLUMN MAJOR ORDER!
     camera_calibration.R[0] = (double) T_C_I[0][0];
@@ -162,7 +170,7 @@ int main(int argc, char **argv)
       return 1;
     }
   
-    if(drv.setCameraFactoryCalibration(camera_id, camera_calibration) == false) {
+    if(drv.setCameraFactoryCalibration(camera_id, camera_calibration, flip_camera) == false) {
       std::cout << "Calibration upload failed!\n";
       return 1;
     }
