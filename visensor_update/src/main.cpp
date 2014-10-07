@@ -54,19 +54,14 @@ void printArgs(void)
     std::cout << std::endl;
 }
 
-bool cmdUpdate(SensorUpdater &updater)
+bool update(SensorUpdater &updater, const UpdateConfig::REPOS &repo)
 {
   /* print version before update */
   std::cout << "Before update:\n";
   updater.printVersionsInstalled();
 
-  /* delete all installed packages */
-  updater.sensorClean();
-  std::cout << "\n";
-
   /* install the newest version of all mandatory packages */
-  bool success = updater.sensorUpdate(UpdateConfig::REPOS::REPO_RELEASE);
-  std::cout << "\n";
+  bool success = updater.sensorUpdate(repo);
 
   /* print version before update */
   std::cout << "After update:\n";
@@ -78,19 +73,19 @@ bool cmdUpdate(SensorUpdater &updater)
   return success;
 }
 
-bool cmdUpdateDevelop(SensorUpdater &updater)
+bool cmdUpdate(SensorUpdater &updater)
 {
-  /* print version before update */
-  std::cout << "Before update:\n";
-  updater.printVersionsInstalled();
+  return update(updater, UpdateConfig::REPOS::REPO_RELEASE);
+}
 
   /* delete all installed packages */
   updater.sensorClean();
   std::cout << "\n";
 
-  /* install the newest version of all mandatory packages */
-  bool success = updater.sensorUpdate(UpdateConfig::REPOS::REPO_DEV);
-  std::cout << "\n";
+bool cmdUpdateDevelop(SensorUpdater &updater)
+{
+  return update(updater, UpdateConfig::REPOS::REPO_DEV);
+}
 
   /* print version before update */
   std::cout << "After update:\n";

@@ -90,6 +90,11 @@ class SensorUpdater {
   bool getUpdateList(SensorUpdater::VersionList &outList, const UpdateConfig::REPOS &repo);
 
 
+  /* package functions */
+  bool downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
+  bool installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
+
+
   /* sensor functions */
   bool sensorInstallDebMemory(const std::string &debian_package);
   bool sensorInstallDebFile(const std::string &file);
