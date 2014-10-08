@@ -61,7 +61,9 @@ namespace UpdateConfig
   const std::string REPOS_PATH[] =
     {
         "release",
-        "develop"
+        "develop",
+        "release_16488",
+        "develop_16488"
     };
 
 
