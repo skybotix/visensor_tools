@@ -62,8 +62,8 @@ namespace UpdateConfig
     {
         "release",
         "develop",
-        "release_16488",
-        "develop_16488"
+        "release/adis16488",
+        "develop/adis16488"
     };
 
 
