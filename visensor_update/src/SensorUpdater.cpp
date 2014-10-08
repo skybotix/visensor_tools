@@ -390,14 +390,14 @@ bool SensorUpdater::sensorClean(void)
   /* remove package after package */
   for(size_t i=0; i<listSensor.size(); i++)
   {
-    std::cout << "Removing " << listSensor[i].package_name << " ...  ";
+    std::cout << "Removing " << listSensor[i].package_name << " from Sensor ... ";
     success = sensorRemoveDeb(listSensor[i].package_name);
     if(success)
       std::cout << "done.\n";
     else
       std::cout << "failed!\n";
   }
-
+  std::cout << std::endl;
   return success;
 }
 
@@ -440,32 +440,45 @@ bool SensorUpdater::getUpdateList(SensorUpdater::VersionList &outList, const Upd
   return success;
 }
 
-/* remove all old packages and install the newst version of all packages in the repo which are mandatory */
-bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
+/* download packages defined in packageList from repo to local path */
+bool SensorUpdater::downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath)
 {
-  SensorUpdater::VersionList list;
-  bool success = getUpdateList(list, repo);
-
   /* download and install the needed packages */
-  WebClient web_client(UpdateConfig::hostname);
+   WebClient web_client(UpdateConfig::hostname);
 
-  for(size_t i=0; i<list.size(); i++)
+   for(size_t i=0; i<packageList.size(); i++)
+   {
+     std::cout << "Downloading " << packageList[i].package_name << " ...  ";
+
+     /* download */
+     std::string pkg_filename = localPath + packageList[i].package_name + std::string(".deb");
+
+     bool ret = web_client.getFileToFile(packageList[i].path, pkg_filename);
+     if(!ret)
+     {
+       std::cout << "failed.\n";
+       std::cout << "[ERROR]: Could not fetch update package from online repository! \n";
+       exit(1);
+     }
+
+     std::cout << "done.\n";
+   }
+   std::cout << std::endl;
+   return true;
+}
+
+/* install packages defined in packageList from local path to sensor*/
+bool SensorUpdater::installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath)
+{
+  for(size_t i=0; i<packageList.size(); i++)
   {
-    std::cout << "Installing " << list[i].package_name << " ...  ";
+    std::cout << "Installing " << packageList[i].package_name << " ...  ";
 
     /* download */
-    std::string pkg_filename = std::string("/tmp/") + list[i].package_name + std::string(".deb");
-
-    bool ret = web_client.getFileToFile(list[i].path, pkg_filename);
-    if(!ret)
-    {
-      std::cout << "failed.\n";
-      std::cout << "[ERROR]: Could not fetch update package from online repository! \n";
-      exit(1);
-    }
+    std::string pkg_filename = localPath + packageList[i].package_name + std::string(".deb");
 
     /* transfer file to sensor */
-    ret = pSsh_->sendFile(pkg_filename, pkg_filename);
+    bool ret = pSsh_->sendFile(pkg_filename, pkg_filename);
     if(!ret)
     {
       std::cout << "failed.\n";
@@ -485,7 +498,28 @@ bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
 
     std::cout << "done.\n";
   }
+  std::cout << std::endl;
+  return true;
+}
 
+/* remove all old packages and install the newest version of all packages in the repo which are mandatory */
+bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
+{
+  SensorUpdater::VersionList list;
+  std::string localPath = std::string("/tmp/");
+  bool success = false;
+
+  if(getUpdateList(list, repo))
+  {
+    if(downloadPackagesToPath(list, localPath))
+    {
+      if(sensorClean())
+      {
+        if(installPackagesFromPath(list, localPath))
+          success = true;
+      }
+    }
+  }
 
   return success;
 }

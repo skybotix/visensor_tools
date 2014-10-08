@@ -41,7 +41,8 @@ void printArgs(void)
     std::cout << std::endl;
 
     std::cout << "  Available commands are:" << std::endl;
-    std::cout << "     update               updates the sensor to the newest on the online repo" << std::endl;
+    std::cout << "     update               updates the sensor to the newest software on the online repo" << std::endl;
+    std::cout << "     update-16488         updates the sensor with ADIS 16488 to the newest software on the online repo" << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
@@ -54,19 +55,14 @@ void printArgs(void)
     std::cout << std::endl;
 }
 
-bool cmdUpdate(SensorUpdater &updater)
+bool update(SensorUpdater &updater, const UpdateConfig::REPOS &repo)
 {
   /* print version before update */
   std::cout << "Before update:\n";
   updater.printVersionsInstalled();
 
-  /* delete all installed packages */
-  updater.sensorClean();
-  std::cout << "\n";
-
   /* install the newest version of all mandatory packages */
-  bool success = updater.sensorUpdate(UpdateConfig::REPOS::REPO_RELEASE);
-  std::cout << "\n";
+  bool success = updater.sensorUpdate(repo);
 
   /* print version before update */
   std::cout << "After update:\n";
@@ -78,28 +74,24 @@ bool cmdUpdate(SensorUpdater &updater)
   return success;
 }
 
+bool cmdUpdate(SensorUpdater &updater)
+{
+  return update(updater, UpdateConfig::REPOS::REPO_RELEASE);
+}
+
+bool cmdUpdate16488(SensorUpdater &updater)
+{
+  return update(updater, UpdateConfig::REPOS::REPO_16488_RELEASE);
+}
+
 bool cmdUpdateDevelop(SensorUpdater &updater)
 {
-  /* print version before update */
-  std::cout << "Before update:\n";
-  updater.printVersionsInstalled();
+  return update(updater, UpdateConfig::REPOS::REPO_DEV);
+}
 
-  /* delete all installed packages */
-  updater.sensorClean();
-  std::cout << "\n";
-
-  /* install the newest version of all mandatory packages */
-  bool success = updater.sensorUpdate(UpdateConfig::REPOS::REPO_DEV);
-  std::cout << "\n";
-
-  /* print version before update */
-  std::cout << "After update:\n";
-  updater.printVersionsInstalled();
-
-  /* reboot the sensor */
-  updater.sensorReboot();
-
-  return success;
+bool cmdUpdate16488Develop(SensorUpdater &updater)
+{
+  return update(updater, UpdateConfig::REPOS::REPO_16488_DEV);
 }
 
 bool cmdClean(SensorUpdater &updater)
@@ -125,7 +117,9 @@ int main(int argc, char** argv)
   std::map<std::string, commandFunction> argCmds =
   {
       {"update", cmdUpdate},
+      {"update-16488", cmdUpdate16488},
       {"update-devel", cmdUpdateDevelop},
+      {"update-16488-devel", cmdUpdate16488Develop},
       {"clean", cmdClean},
       {"reboot", cmdReboot},
       {"version", cmdVersion},

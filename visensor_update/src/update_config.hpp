@@ -53,13 +53,17 @@ namespace UpdateConfig
   enum class REPOS : std::size_t
     {
       REPO_RELEASE,
-      REPO_DEV
+      REPO_DEV,
+      REPO_16488_RELEASE,
+      REPO_16488_DEV
     };
 
   const std::string REPOS_PATH[] =
     {
         "release",
-        "develop"
+        "develop",
+        "release/adis16488",
+        "develop/adis16488"
     };
 
 
