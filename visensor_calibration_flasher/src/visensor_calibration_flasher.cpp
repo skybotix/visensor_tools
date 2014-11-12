@@ -152,8 +152,6 @@ int main(int argc, char **argv)
     camera_calibration.principal_point[1] = (double) intrinsics[3];
 
     XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
-    int image_width = resolution[0];
-    int image_height = resolution[1];
 
     std::string camera_model;
     std::string distortion_model;
