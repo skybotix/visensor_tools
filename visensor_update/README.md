@@ -22,11 +22,18 @@ make
 ### Howto: Update the VI-Sensor###
 Make sure that you are connected to the internet. Make sure that the sensor is connected and you know its IP. If the sensor is directly connected to the PC, its IP is 10.0.0.1 :
 
-Run visensor_update tool (assuming that the sensor IP is 10.0.0.1
+Run visensor_update tool (assuming that the sensor IP is 10.0.0.1 and the sensor has a ADIS16448 IMU)
 ```
 cd visensor_tools/visensor_update/bin
 ./visensor_update 10.0.0.1 update
 ```
+
+If the sensor has a ADIS16488 IMU (tactical grade), adjust the update command as follows:
+```
+cd visensor_tools/visensor_update/bin
+./visensor_update 10.0.0.1 update-16488
+```
+
 If everything went smoothly, the sensor will reboot after the update and the terminal output is something like
 
 ```
