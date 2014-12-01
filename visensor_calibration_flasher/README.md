@@ -4,6 +4,7 @@
 
 Clone repository into your ROS catkin workspace
 ```
+cd <your_caktin_workspace>/src
 git clone https://github.com/skybotix/visensor_tools.git
 ```
 Build your catkin workspace
