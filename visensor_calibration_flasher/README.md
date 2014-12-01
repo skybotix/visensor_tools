@@ -19,7 +19,9 @@ To test the program, we attached an example camchain file to this repo. You can 
 
 Once the calibration using Kalibr is done, you can update the camchain-imucam-example.yaml file using the new values.
 
-You can now upload the new calibration to the VI-Sensor **Please note that you will overwrite the factory calibration**:
+You can now upload the new calibration to the VI-Sensor
+
+**Please note that you will overwrite the factory calibration**:
 ```
 roslaunch visensor_calibration_flasher flash_sensor.launch
 ```
