@@ -32,25 +32,28 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 
-#include <visensor/visensor.hpp>
+#include <visensor_impl.hpp>
 
 void printSensorConfig(const visensor::ViCameraCalibration& config){
-
+  visensor::ViCameraLensModelRadial::Ptr lens_model = config.getLensModel<visensor::ViCameraLensModelRadial>();
+  visensor::ViCameraProjectionModelPinhole::Ptr projection_model = config.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
   std::cout << "Focal Length: \n";
-  std::cout << config.focal_point[0] << "\t" << config.focal_point[1] << std::endl;
+  std::cout << projection_model->focal_length_u_ << "\t" << projection_model->focal_length_v_ << std::endl;
   std::cout << "Principcal Point: \n";
-  std::cout << config.principal_point[0] << "\t" << config.principal_point[1] << std::endl;
-  std::cout << "Principcal Coefficient: \n";
+  std::cout << projection_model->principal_point_u_ << "\t" << projection_model->principal_point_v_ << std::endl;
+
+  std::cout << "Projection Coefficient: \n";
+  std::vector<double> coefficients = lens_model->getCoefficients();
   for (int i = 0; i< 5; ++i){
-    std::cout << config.dist_coeff[i] << " ";
+    std::cout << coefficients[i] << " ";
   }
   std::cout << "\nR: \n";
   for (int i = 0; i< 3; ++i){
-    std::cout << config.R[i] << "\t" << config.R[i + 3] << "\t" << config.R[i + 6] << "\n";
+    std::cout << config.R_[i] << "\t" << config.R_[i + 3] << "\t" << config.R_[i + 6] << "\n";
   }
   std::cout << "T: \n";
   for (int i = 0; i< 3; ++i){
-    std::cout << config.t[i] << "\t";
+    std::cout << config.t_[i] << "\t";
   }
   std::cout << std::endl;
 }
@@ -71,14 +74,12 @@ int main(int argc, char **argv)
   ros::NodeHandle nh("~");
 
   visensor::ViSensorDriver drv;
-
   try {
     drv.init();
   } catch (visensor::exceptions const &ex) {
     std::cout << ex.what() << "\n";
     exit(1);
   }
-
   std::vector<visensor::SensorId::SensorId> list_of_camera_ids = drv.getListOfCameraIDs();
   
   std::vector<visensor::ViCameraCalibration> camCalibration;
@@ -99,10 +100,16 @@ int main(int argc, char **argv)
   for (auto camera_id : list_of_camera_ids)
   {
     visensor::ViCameraCalibration camera_calibration;
+    std::string camera_model;
+    std::string distortion_model;
+
+    camera_calibration.cam_id_ = static_cast<int>(camera_id);
+
 
     std::cout << "Reading out " << ROS_CAMERA_NAMES.at(static_cast<int>(camera_id)) << std::endl;
     XmlRpc::XmlRpcValue cam_params;
     nh.getParam(ROS_CAMERA_NAMES.at(static_cast<int>(camera_id)), cam_params);
+
 
     assert(cam_params.hasMember("distortion_coeffs"));
     assert(cam_params.hasMember("intrinsics"));
@@ -111,50 +118,6 @@ int main(int argc, char **argv)
     assert(cam_params.hasMember("distortion_model"));
     assert(cam_params.hasMember("T_cam_imu"));
     XmlRpc::XmlRpcValue T_C_I;
-
-    bool flip_camera;
-    if (cam_params.hasMember("flip_camera")){
-      flip_camera = cam_params["flip_camera"];
-    }
-    else{
-      flip_camera = true;
-    }
-    std::cout << "flip_camera: " << flip_camera << std::endl;
-    T_C_I = cam_params["T_cam_imu"];
-    //EIGEN USES COLUMN MAJOR ORDER!
-    camera_calibration.R[0] = (double) T_C_I[0][0];
-    camera_calibration.R[3] = (double) T_C_I[0][1];
-    camera_calibration.R[6] = (double) T_C_I[0][2];
-    camera_calibration.R[1] = (double) T_C_I[1][0];
-    camera_calibration.R[4] = (double) T_C_I[1][1];
-    camera_calibration.R[7] = (double) T_C_I[1][2];
-    camera_calibration.R[2] = (double) T_C_I[2][0];
-    camera_calibration.R[5] = (double) T_C_I[2][1];
-    camera_calibration.R[8] = (double) T_C_I[2][2];
-
-    camera_calibration.t[0] = (double) T_C_I[0][3];
-    camera_calibration.t[1] = (double) T_C_I[1][3];
-    camera_calibration.t[2] = (double) T_C_I[2][3];
-
-
-
-    XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
-    camera_calibration.dist_coeff[0] = (double) distortion_coeffs[0];
-    camera_calibration.dist_coeff[1] = (double) distortion_coeffs[1];
-    camera_calibration.dist_coeff[2] = (double) distortion_coeffs[2];
-    camera_calibration.dist_coeff[3] = (double) distortion_coeffs[3];
-    camera_calibration.dist_coeff[4] = (double) 0.0;
-    XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
-
-    camera_calibration.focal_point[0] = (double) intrinsics[0];
-    camera_calibration.focal_point[1] = (double) intrinsics[1];
-    camera_calibration.principal_point[0] = (double) intrinsics[2];
-    camera_calibration.principal_point[1] = (double) intrinsics[3];
-
-    XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
-
-    std::string camera_model;
-    std::string distortion_model;
 
     camera_model.assign(cam_params["camera_model"]);
     distortion_model.assign(cam_params["distortion_model"]);
@@ -167,8 +130,58 @@ int main(int argc, char **argv)
       std::cout << "Distortion Model is not radtan model. Abort, abort!\n";
       return 1;
     }
-  
-    if(drv.setCameraFactoryCalibration(camera_id, camera_calibration, flip_camera) == false) {
+
+    visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
+    visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+
+
+    if (cam_params.hasMember("flip_camera")){
+      camera_calibration.is_flipped_ = cam_params["flip_camera"];
+    }
+    else{
+      camera_calibration.is_flipped_ = true;
+    }
+    std::cout << "flip_camera: " << camera_calibration.is_flipped_ << std::endl;
+    T_C_I = cam_params["T_cam_imu"];
+    //EIGEN USES COLUMN MAJOR ORDER!
+    camera_calibration.R_[0] = (double) T_C_I[0][0];
+    camera_calibration.R_[3] = (double) T_C_I[0][1];
+    camera_calibration.R_[6] = (double) T_C_I[0][2];
+    camera_calibration.R_[1] = (double) T_C_I[1][0];
+    camera_calibration.R_[4] = (double) T_C_I[1][1];
+    camera_calibration.R_[7] = (double) T_C_I[1][2];
+    camera_calibration.R_[2] = (double) T_C_I[2][0];
+    camera_calibration.R_[5] = (double) T_C_I[2][1];
+    camera_calibration.R_[8] = (double) T_C_I[2][2];
+
+    camera_calibration.t_[0] = (double) T_C_I[0][3];
+    camera_calibration.t_[1] = (double) T_C_I[1][3];
+    camera_calibration.t_[2] = (double) T_C_I[2][3];
+
+
+
+    XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
+    lens_model->k1_ = (double) distortion_coeffs[0];
+    lens_model->k2_ = (double) distortion_coeffs[1];
+    lens_model->r1_ = (double) distortion_coeffs[2];
+    lens_model->r2_ = (double) distortion_coeffs[3];
+    XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
+
+    projection_model->focal_length_u_ = (double) intrinsics[0];
+    projection_model->focal_length_v_ = (double) intrinsics[1];
+    projection_model->principal_point_u_ = (double) intrinsics[2];
+    projection_model->principal_point_v_ = (double) intrinsics[3];
+
+    XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
+    camera_calibration.resolution_[0] = (double) resolution[0];
+    camera_calibration.resolution_[1] = (double) resolution[1];
+
+
+    camera_calibration.slot_id_ = 0;
+
+
+    visensor::ViSensorDriver::Impl* privat_drv = drv.getPrivateApiAccess();
+    if(privat_drv->setCameraFactoryCalibration(camera_calibration) == false) {
       std::cout << "Calibration upload failed!\n";
       return 1;
     }
