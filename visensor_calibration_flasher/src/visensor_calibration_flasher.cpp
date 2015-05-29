@@ -119,20 +119,6 @@ int main(int argc, char **argv)
     assert(cam_params.hasMember("T_cam_imu"));
     XmlRpc::XmlRpcValue T_C_I;
 
-    camera_model.assign(cam_params["camera_model"]);
-    distortion_model.assign(cam_params["distortion_model"]);
-
-    if (camera_model != std::string("pinhole")) {
-      std::cout << "Camera Model is not pinhole model. Abort, abort!\n";
-      return 1;
-    }
-    if (distortion_model != std::string("radtan")) {
-      std::cout << "Distortion Model is not radtan model. Abort, abort!\n";
-      return 1;
-    }
-
-    visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
-    visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
 
 
     if (cam_params.hasMember("flip_camera")){
@@ -160,17 +146,50 @@ int main(int argc, char **argv)
 
 
 
+    distortion_model.assign(cam_params["distortion_model"]);
     XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
-    lens_model->k1_ = (double) distortion_coeffs[0];
-    lens_model->k2_ = (double) distortion_coeffs[1];
-    lens_model->r1_ = (double) distortion_coeffs[2];
-    lens_model->r2_ = (double) distortion_coeffs[3];
-    XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
+    if (distortion_model == std::string("radtan"))  {
+      visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
+      lens_model->k1_ = (double) distortion_coeffs[0];
+      lens_model->k2_ = (double) distortion_coeffs[1];
+      lens_model->r1_ = (double) distortion_coeffs[2];
+      lens_model->r2_ = (double) distortion_coeffs[3];
+    }
+    else if (distortion_model == std::string("equidistant")) {
+      visensor::ViCameraLensModelEquidistant::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
+      lens_model->k1_ = (double) distortion_coeffs[0];
+      lens_model->k2_ = (double) distortion_coeffs[1];
+      lens_model->k3_ = (double) distortion_coeffs[2];
+      lens_model->k4_ = (double) distortion_coeffs[3];
+    }
+    else {
+      std::cout << "Distortion Model is not supported. Abort, abort!\n";
+      return 1;
+    }
+    camera_model.assign(cam_params["camera_model"]);
 
-    projection_model->focal_length_u_ = (double) intrinsics[0];
-    projection_model->focal_length_v_ = (double) intrinsics[1];
-    projection_model->principal_point_u_ = (double) intrinsics[2];
-    projection_model->principal_point_v_ = (double) intrinsics[3];
+    XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
+    if (camera_model == std::string("pinhole")) {
+      visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+      projection_model->focal_length_u_ = (double) intrinsics[0];
+      projection_model->focal_length_v_ = (double) intrinsics[1];
+      projection_model->principal_point_u_ = (double) intrinsics[2];
+      projection_model->principal_point_v_ = (double) intrinsics[3];
+    }
+    else if (camera_model == std::string("omnidirectional")){
+      visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
+      projection_model->focal_length_u_ = (double) intrinsics[0];
+      projection_model->focal_length_v_ = (double) intrinsics[1];
+      projection_model->principal_point_u_ = (double) intrinsics[2];
+      projection_model->principal_point_v_ = (double) intrinsics[3];
+      // todo(lschmid) how to check if intrinsics has 5 attributes?
+      projection_model->mirror_xi_ = (double) intrinsics[4];
+    }
+    else {
+      std::cout << "Current Camera Model is supported. Abort, abort!\n";
+      return 1;
+    }
+
 
     XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
     camera_calibration.resolution_[0] = (double) resolution[0];
