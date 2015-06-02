@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package>
+  <name>visensor_update</name>
+  <version>1.0.0</version>
+  <description>Loads the newest version from the Internet to the sensor</description>
+  <url>http://www.skybotix.com</url>
+  <author>Fabio Diem, Lukas Schmid</author>
+  <maintainer email="fabio.diem@skybotix.com">Fabio Diem</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>roscpp</build_depend>
+  <build_depend>libvisensor</build_depend>
+  
+  <run_depend>roscpp</run_depend>
+  <run_depend>libvisensor</run_depend>
+  
+</package>
