@@ -32,14 +32,21 @@
 
 #ifndef SENSORUPDATER_HPP_
 #define SENSORUPDATER_HPP_
+#include <vector>
+#include <tuple>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include "update_config.hpp"
 
 #include "communication_layers/SshConnection.hpp"
 #include "communication_layers/WebClient.hpp"
 
-#include <vector>
-#include <tuple>
+
+//#include <visensor/visensor.hpp>
+#include <visensor_impl.hpp>
+
 
 
 class SensorUpdater {
@@ -94,6 +101,10 @@ class SensorUpdater {
   bool downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
   bool installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
 
+  /* calibration functions */
+  bool convertCalibration();
+  std::vector<visensor::ViCameraCalibration>  loadXmlCameraCalibration();
+  bool loadPropertyTree(std::string calibration_filename, boost::property_tree::ptree& tree);
 
   /* sensor functions */
   bool sensorInstallDebMemory(const std::string &debian_package);

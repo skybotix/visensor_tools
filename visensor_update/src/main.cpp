@@ -34,6 +34,8 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <ros/ros.h>
+#include <ros/package.h>
 
 void printArgs(void)
 {
@@ -43,6 +45,7 @@ void printArgs(void)
     std::cout << "  Available commands are:" << std::endl;
     std::cout << "     update               updates the sensor to the newest software on the online repo" << std::endl;
     std::cout << "     update-16488         updates the sensor with ADIS 16488 to the newest software on the online repo" << std::endl;
+    std::cout << "     convert-calibration  converts the calibration format from libvisensor version 1.2.X to 2.0.X"  << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
@@ -94,6 +97,11 @@ bool cmdUpdate16488Develop(SensorUpdater &updater)
   return update(updater, UpdateConfig::REPOS::REPO_16488_DEV);
 }
 
+bool cmdConvertCalibration(SensorUpdater &updater)
+{
+  return updater.convertCalibration();
+}
+
 bool cmdClean(SensorUpdater &updater)
 {
   return updater.sensorClean();
@@ -112,6 +120,10 @@ bool cmdReboot(SensorUpdater &updater)
 
 int main(int argc, char** argv)
 {
+  ros::init(argc, argv, "visensor_update");
+  ros::NodeHandle nh;
+  ros::NodeHandle private_nh("~");
+
   // command arguments
   typedef bool (*commandFunction)(SensorUpdater&); // function pointer type
   std::map<std::string, commandFunction> argCmds =
@@ -120,6 +132,7 @@ int main(int argc, char** argv)
       {"update-16488", cmdUpdate16488},
       {"update-devel", cmdUpdateDevelop},
       {"update-16488-devel", cmdUpdate16488Develop},
+      {"convert-calibration", cmdConvertCalibration},
       {"clean", cmdClean},
       {"reboot", cmdReboot},
       {"version", cmdVersion},

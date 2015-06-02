@@ -11,10 +11,13 @@
 #include <libssh2.h>
 #include <string>
 
+#include <boost/smart_ptr.hpp>
+
 class SshConnection {
 
 
  public:
+  typedef boost::shared_ptr<SshConnection> Ptr;
   SshConnection(const std::string &hostname, const std::string &username, const std::string &password, const unsigned int port=22);
   virtual ~SshConnection();
 

@@ -35,8 +35,10 @@
 
 #include "SensorUpdater.hpp"
 
-#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/tokenizer.hpp>
 #include <boost/regex.hpp>
 
 #include <map>
@@ -502,21 +504,183 @@ bool SensorUpdater::installPackagesFromPath(SensorUpdater::VersionList &packageL
   return true;
 }
 
+
+bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::property_tree::ptree& tree) {
+  try
+  {
+    read_xml(calibration_filename, tree, boost::property_tree::xml_parser::trim_whitespace );
+  } catch(std::exception const&  ex)
+  {
+    std::cout << "Exception: " << ex.what() << "\n";
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * tries to load the camera calibration
+ *
+ * The camera calibration with the format of the libvisensor < 2.0.0 is loaded and parsed to
+ * ViCameraCalibration vector. If no Xml format could be found or parsed a empty vector is returned.
+ *
+ * @return vector of the saved configurations
+ *
+ */
+std::vector<visensor::ViCameraCalibration>  SensorUpdater::loadXmlCameraCalibration() {
+  std::vector<visensor::ViCameraCalibration> output_vector;
+  boost::property_tree::ptree calibration_tree;
+//  std::string local_calibration_filename = std::string("/tmp/");
+//  std::string remote_calibration_filename = std::string("/calibration.xml");
+  std::string remote_calibration_filename = std::string("/home/lukas/catkin_ws/src/calibration.xml");
+  std::string local_calibration_filename = std::string("/home/lukas/catkin_ws/src/calibration.xml");
+  /* transfer calibration file from the sensor */
+//  if(!pSsh_->getFile(remote_calibration_filename, local_calibration_filename))
+//  {
+//    std::cout << "failed.\n";
+//    std::cout << "[ERROR]: Could not download calibration file from the sensor!\n";
+//    exit(1);
+//  }
+
+  std::ifstream t(local_calibration_filename);
+  std::cout << t.rdbuf();
+
+  std::cout <<  "calibration filename is: " << std::endl <<  local_calibration_filename<< std::endl;
+  if (!loadPropertyTree(local_calibration_filename, calibration_tree) ) {
+    std::cout << "failed.\n";
+    std::cout << "[ERROR]: Could not load the calibration file!\n";
+    exit(1);
+  }
+
+  BOOST_FOREACH(const boost::property_tree::ptree::value_type & iter, calibration_tree.get_child("") ) {
+    visensor::ViCameraCalibration calibration(visensor::ViCameraLensModel::LensModelTypes::RADIAL,
+                                              visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE);
+    std::vector<std::string> elements;
+    boost::split(elements, iter.first, boost::is_any_of("_"));
+
+    std::cout << elements.size() << " elements were found" << std::endl;
+
+    std::cout <<" first element is:" << elements[0] << std::endl;
+    if( (elements.size() == 3) && (elements[0] == "cam") ) {
+      try
+      {
+        calibration.cam_id_ = std::stoi(elements[1]);
+        calibration.slot_id_ = std::stoi(elements[2])/2;
+        calibration.is_flipped_ = std::stoi(elements[2])%2;
+        calibration.resolution_ = {752, 480};
+        //build childtree name
+        std::string cam_id_str = boost::lexical_cast<std::string>(calibration.cam_id_);
+        std::string slot_str = boost::lexical_cast<std::string>(std::stoi(elements[2]));
+        std::cout <<" child_tree:" <<  std::string("cam_") + cam_id_str + std::string("_") + slot_str + std::string(".") << std::endl;
+        std::string child_tree = std::string("cam_") + cam_id_str + std::string("_") + slot_str + std::string(".");
+
+        //load data
+        visensor::ViCameraLensModelRadial::Ptr lens_model = calibration.getLensModel<visensor::ViCameraLensModelRadial>();
+        visensor::ViCameraProjectionModelPinhole::Ptr projection_model = calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+        projection_model->focal_length_u_ = calibration_tree.get<double>(child_tree + "fu");
+        projection_model->focal_length_v_ = calibration_tree.get<double>(child_tree + "fv");
+        projection_model->principal_point_u_ = calibration_tree.get<double>(child_tree + "cu");
+        projection_model->principal_point_v_ = calibration_tree.get<double>(child_tree + "cv");
+
+        lens_model->k1_ = calibration_tree.get<double>(child_tree + "K0");
+        lens_model->k2_ = calibration_tree.get<double>(child_tree + "K1");
+        lens_model->r1_ = calibration_tree.get<double>(child_tree + "K2");
+        lens_model->r2_ = calibration_tree.get<double>(child_tree + "K3");
+
+        calibration.R_.resize(9);
+        calibration.R_[0] = calibration_tree.get<double>(child_tree + "R00");
+        calibration.R_[1] = calibration_tree.get<double>(child_tree + "R01");
+        calibration.R_[2] = calibration_tree.get<double>(child_tree + "R02");
+        calibration.R_[3] = calibration_tree.get<double>(child_tree + "R10");
+        calibration.R_[4] = calibration_tree.get<double>(child_tree + "R11");
+        calibration.R_[5] = calibration_tree.get<double>(child_tree + "R12");
+        calibration.R_[6] = calibration_tree.get<double>(child_tree + "R20");
+        calibration.R_[7] = calibration_tree.get<double>(child_tree + "R21");
+        calibration.R_[8] = calibration_tree.get<double>(child_tree + "R22");
+
+        calibration.t_.resize(3);
+        calibration.t_[0] = calibration_tree.get<double>(child_tree + "t0");
+        calibration.t_[1] = calibration_tree.get<double>(child_tree + "t1");
+        calibration.t_[2] = calibration_tree.get<double>(child_tree + "t2");
+
+      } catch(std::exception const&  ex)
+      {
+        std::cout << "Exception: " << ex.what() << "\n";
+        return output_vector;
+      }
+      output_vector.push_back(calibration);
+    }
+  }
+  std::cout << "output_vector is: " << output_vector.size() << "\n";
+  return output_vector;
+}
+
+bool SensorUpdater::convertCalibration() {
+  visensor::ViSensorDriver drv;
+  visensor::ViSensorDriver::Impl* privat_drv = drv.getPrivateApiAccess();
+  try {
+    drv.init();
+  }
+  catch (visensor::exceptions const &ex) {
+    std::cout << ex.what() << "\n";
+    exit(1);
+  }
+
+  std::vector<visensor::ViCameraCalibration> calibration_list = loadXmlCameraCalibration();
+  if (calibration_list.size() == 0) {
+    std::cout <<  "no calibration were found" << std::endl;
+    exit(1);
+  }
+  for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();  it != calibration_list.end(); ++it) {
+    std::cout <<"save camera calibration for cam :" << it->cam_id_ << std::endl;
+    // \todo(lschmid) Does it make sense to clean calibration before setting it??
+    privat_drv->cleanCameraCalibrations(static_cast<SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
+                                        visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
+                                        visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
+    if (it->slot_id_ == 0) {
+      if(privat_drv->setCameraFactoryCalibration(*it) == false) {
+        std::cout << "Calibration upload failed!\n";
+        exit(1);
+      }
+    }
+    else {
+      if(drv.setCameraCalibration(*it) == false) {
+        std::cout << "Calibration upload failed!\n";
+        exit(1);
+      }
+    }
+  }
+  return true;
+}
+
 /* remove all old packages and install the newest version of all packages in the repo which are mandatory */
 bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
 {
   SensorUpdater::VersionList list;
+  SensorUpdater::VersionList currentList;
+  VersionEntry linux_embedded_entry;
   std::string localPath = std::string("/tmp/");
+
+  VersionEntry version_of_cali_change;
+  version_of_cali_change.version_major = 2;
+  version_of_cali_change.version_minor = 0;
+  version_of_cali_change.version_patch = 0;
+
   bool success = false;
 
   if(getUpdateList(list, repo))
   {
+    if(!getVersionInstalled(currentList,  UpdateConfig::prefix, false))
+      return false;
+
     if(downloadPackagesToPath(list, localPath))
     {
       if(sensorClean())
       {
-        if(installPackagesFromPath(list, localPath))
+        // update to newest version
+        if(installPackagesFromPath(list, localPath)) {
           success = true;
+        }
       }
     }
   }
