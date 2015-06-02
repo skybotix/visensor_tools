@@ -49,7 +49,7 @@ void printSensorConfig(const visensor::ViCameraCalibration& config){
   }
   std::cout << "\nR: \n";
   for (int i = 0; i< 3; ++i){
-    std::cout << config.R_[i] << "\t" << config.R_[i + 3] << "\t" << config.R_[i + 6] << "\n";
+    std::cout << config.R_.at(i) << "\t" << config.R_.at(i + 3) << "\t" << config.R_.at(i + 6) << "\n";
   }
   std::cout << "T: \n";
   for (int i = 0; i< 3; ++i){
@@ -72,7 +72,6 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "vi_calibration_flasher");
   ros::NodeHandle nh("~");
-
   visensor::ViSensorDriver drv;
   try {
     drv.init();
@@ -97,6 +96,7 @@ int main(int argc, char **argv)
     return 0;
   }
 
+  visensor::ViSensorDriver::Impl* privat_drv = drv.getPrivateApiAccess();
   for (auto camera_id : list_of_camera_ids)
   {
     visensor::ViCameraCalibration camera_calibration;
@@ -130,26 +130,31 @@ int main(int argc, char **argv)
     std::cout << "flip_camera: " << camera_calibration.is_flipped_ << std::endl;
     T_C_I = cam_params["T_cam_imu"];
     //EIGEN USES COLUMN MAJOR ORDER!
-    camera_calibration.R_[0] = (double) T_C_I[0][0];
-    camera_calibration.R_[3] = (double) T_C_I[0][1];
-    camera_calibration.R_[6] = (double) T_C_I[0][2];
-    camera_calibration.R_[1] = (double) T_C_I[1][0];
-    camera_calibration.R_[4] = (double) T_C_I[1][1];
-    camera_calibration.R_[7] = (double) T_C_I[1][2];
-    camera_calibration.R_[2] = (double) T_C_I[2][0];
-    camera_calibration.R_[5] = (double) T_C_I[2][1];
-    camera_calibration.R_[8] = (double) T_C_I[2][2];
+    camera_calibration.R_.resize(9);
+    camera_calibration.R_.at(0) = (double) T_C_I[0][0];
+    camera_calibration.R_.at(3) = (double) T_C_I[0][1];
+    camera_calibration.R_.at(6) = (double) T_C_I[0][2];
+    camera_calibration.R_.at(1) = (double) T_C_I[1][0];
+    camera_calibration.R_.at(4) = (double) T_C_I[1][1];
+    camera_calibration.R_.at(7) = (double) T_C_I[1][2];
+    camera_calibration.R_.at(2) = (double) T_C_I[2][0];
+    camera_calibration.R_.at(5) = (double) T_C_I[2][1];
+    camera_calibration.R_.at(8) = (double) T_C_I[2][2];
 
-    camera_calibration.t_[0] = (double) T_C_I[0][3];
-    camera_calibration.t_[1] = (double) T_C_I[1][3];
-    camera_calibration.t_[2] = (double) T_C_I[2][3];
+    camera_calibration.t_.resize(3);
+    camera_calibration.t_.at(0) = (double) T_C_I[0][3];
+    camera_calibration.t_.at(1) = (double) T_C_I[1][3];
+    camera_calibration.t_.at(2) = (double) T_C_I[2][3];
 
 
 
     distortion_model.assign(cam_params["distortion_model"]);
     XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
+    std::cout << "distortion_model is: " << distortion_model << std::endl;
     if (distortion_model == std::string("radtan"))  {
       visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
+      std::cout << "lens_model radial and params are: " << distortion_coeffs << std::endl;
+      lens_model->setType();
       lens_model->k1_ = (double) distortion_coeffs[0];
       lens_model->k2_ = (double) distortion_coeffs[1];
       lens_model->r1_ = (double) distortion_coeffs[2];
@@ -157,6 +162,7 @@ int main(int argc, char **argv)
     }
     else if (distortion_model == std::string("equidistant")) {
       visensor::ViCameraLensModelEquidistant::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
+      lens_model->setType();
       lens_model->k1_ = (double) distortion_coeffs[0];
       lens_model->k2_ = (double) distortion_coeffs[1];
       lens_model->k3_ = (double) distortion_coeffs[2];
@@ -166,11 +172,15 @@ int main(int argc, char **argv)
       std::cout << "Distortion Model is not supported. Abort, abort!\n";
       return 1;
     }
-    camera_model.assign(cam_params["camera_model"]);
 
+    std::cout << "lens model is: " << static_cast<int>(camera_calibration.lens_model_->type_) << std::endl;
+
+    camera_model.assign(cam_params["camera_model"]);
     XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
+    std::cout << "projection_model is: " << camera_model << std::endl;
     if (camera_model == std::string("pinhole")) {
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+      projection_model->setType();
       projection_model->focal_length_u_ = (double) intrinsics[0];
       projection_model->focal_length_v_ = (double) intrinsics[1];
       projection_model->principal_point_u_ = (double) intrinsics[2];
@@ -178,6 +188,7 @@ int main(int argc, char **argv)
     }
     else if (camera_model == std::string("omnidirectional")){
       visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
+      projection_model->setType();
       projection_model->focal_length_u_ = (double) intrinsics[0];
       projection_model->focal_length_v_ = (double) intrinsics[1];
       projection_model->principal_point_u_ = (double) intrinsics[2];
@@ -190,16 +201,19 @@ int main(int argc, char **argv)
       return 1;
     }
 
-
     XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
-    camera_calibration.resolution_[0] = (double) resolution[0];
-    camera_calibration.resolution_[1] = (double) resolution[1];
+    std::cout << "resolution is: " << resolution << std::endl;
+    camera_calibration.resolution_[0] = (int) resolution[0];
+    camera_calibration.resolution_[1] = (int) resolution[1];
 
 
     camera_calibration.slot_id_ = 0;
 
 
-    visensor::ViSensorDriver::Impl* privat_drv = drv.getPrivateApiAccess();
+    // delete every factroy calibration of the corresponding cam
+    privat_drv->cleanCameraCalibrations(camera_id, 0, -1,
+                                        visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
+                                        visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
     if(privat_drv->setCameraFactoryCalibration(camera_calibration) == false) {
       std::cout << "Calibration upload failed!\n";
       return 1;
