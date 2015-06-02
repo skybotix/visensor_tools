@@ -39,14 +39,12 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 #include "update_config.hpp"
-
-#include "communication_layers/SshConnection.hpp"
 #include "communication_layers/WebClient.hpp"
 
-
+// include from libvisensor
+#include "communication_layers/SshConnections.hpp"
 //#include <visensor/visensor.hpp>
 #include <visensor_impl.hpp>
-
 
 
 class SensorUpdater {
@@ -103,7 +101,9 @@ class SensorUpdater {
 
   /* calibration functions */
   bool convertCalibration();
-  std::vector<visensor::ViCameraCalibration>  loadXmlCameraCalibration();
+  std::vector<visensor::ViCameraCalibration>  parseXmlCameraCalibration(std::string xml_filename);
+  bool checkCalibrationConvertion(VersionList old_list, VersionList new_list);
+  bool loadXmlCameraCalibrationFile(std::string local_calibration_filename);
   bool loadPropertyTree(std::string calibration_filename, boost::property_tree::ptree& tree);
 
   /* sensor functions */
@@ -122,7 +122,8 @@ class SensorUpdater {
 
 
  private:
-  SshConnection *pSsh_; //ssh connection to sensor
+  visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
+  visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
 
 };
 

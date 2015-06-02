@@ -22,21 +22,20 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${libvisensor_INCLUDE_DIRS})
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall -Wno-reorder -std=c++0x -D__STRICT_ANSI__")
 #ADD_DEFINITIONS (-march=native -O2 -fmessage-length=0 -MMD -MP -Wno-reorder -Wall -pedantic -std=c++0x ) #Release
-#ADD_DEFINITIONS (-march=native -std=c++0x -O0 -g3 -fmessage-length=0 -MMD -MP -Wall -pedantic -std=c++0x ) #Debug
+# ADD_DEFINITIONS (-march=native -std=c++0x -O0 -g3 -fmessage-length=0 -MMD -MP -Wall  -Wno-reorder -pedantic -std=c++0x ) #Debug
 
 catkin_package(
   INCLUDE_DIRS ${catkin_INCLUDE_DIRS}
   CATKIN_DEPENDS
   roscpp 
-  libvisensor
 )
 
 ###########
 # BUILD
 ###########
-FILE(GLOB SRCS src/*.cpp src/communication_layer/*.cpp)
+FILE(GLOB SRCS src/*.cpp src/communication_layers/*.cpp)
 
 add_executable(visensor_update  ${SRCS})
 
-TARGET_LINK_LIBRARIES(visensor_update ${catkin_LIBRARIES} boost_regex curl ssh2  )
+TARGET_LINK_LIBRARIES(visensor_update  ${libvisensor_LIBRARIES} ${catkin_LIBRARIES}   boost_regex curl)
 

@@ -122,7 +122,6 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "visensor_update");
   ros::NodeHandle nh;
-  ros::NodeHandle private_nh("~");
 
   // command arguments
   typedef bool (*commandFunction)(SensorUpdater&); // function pointer type

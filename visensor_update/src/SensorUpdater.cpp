@@ -44,11 +44,9 @@
 #include <map>
 
 
-SensorUpdater::SensorUpdater(const std::string &hostname) :
-  pSsh_( new SshConnection(hostname,
-                           UpdateConfig::ssh_username,
-                           UpdateConfig::ssh_password) )
-{
+SensorUpdater::SensorUpdater(const std::string &hostname) {
+  pSsh_ =  boost::make_shared<visensor::SshConnection>(hostname, UpdateConfig::ssh_username, UpdateConfig::ssh_password);
+  pFile_transfer_ =  boost::make_shared<visensor::FileTransfer>(pSsh_);
 }
 
 
@@ -58,7 +56,7 @@ SensorUpdater::~SensorUpdater()
 
 //function returns a vector of pairs with (package_name, version)
 //for all packages that start with the given packagename prefix
-bool SensorUpdater::getVersionInstalled(SensorUpdater::VersionList &outPackageList, const std::string &prefix, bool dontParseVersion)
+bool SensorUpdater::getVersionInstalled(VersionList &outPackageList, const std::string &prefix, bool dontParseVersion)
 {
   int exitcode=127;
 
@@ -113,7 +111,7 @@ bool SensorUpdater::getVersionInstalled(SensorUpdater::VersionList &outPackageLi
        // what[4] contains the patch version number
        // what[5] contains the arch
 
-       SensorUpdater::VersionEntry package;
+       VersionEntry package;
        package.package_name = what[1];
        if(!dontParseVersion)
        {
@@ -137,7 +135,7 @@ bool SensorUpdater::getVersionInstalled(SensorUpdater::VersionList &outPackageLi
 
 
 
-bool SensorUpdater::getVersionsOnServer(SensorUpdater::VersionList &outPackageList, UpdateConfig::REPOS repo)
+bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, UpdateConfig::REPOS repo)
 {
   /* clear the output list*/
   outPackageList.clear();
@@ -182,7 +180,7 @@ bool SensorUpdater::getVersionsOnServer(SensorUpdater::VersionList &outPackageLi
       // what[4] contains the patch version number
       // what[5] contains the arch
 
-      SensorUpdater::VersionEntry package;
+      VersionEntry package;
       package.package_name = what[1];
       package.version_major = boost::lexical_cast<unsigned int>( what[2] );
       package.version_minor = boost::lexical_cast<unsigned int>( what[3] );
@@ -207,7 +205,7 @@ bool SensorUpdater::getVersionsOnServer(SensorUpdater::VersionList &outPackageLi
 
 bool SensorUpdater::printVersionsInstalled(void)
 {
-  SensorUpdater::VersionList listSensor;
+  VersionList listSensor;
   bool success = getVersionInstalled(listSensor, UpdateConfig::prefix);
 
   if(!success)
@@ -243,7 +241,7 @@ bool SensorUpdater::printVersionsInstalled(void)
 
 bool SensorUpdater::printVersionsRepo(UpdateConfig::REPOS repo)
 {
-  SensorUpdater::VersionList listFtp;
+  VersionList listFtp;
   bool success = getVersionsOnServer(listFtp, repo);
 
   if(!success)
@@ -378,7 +376,7 @@ bool SensorUpdater::sensorSetMountRW(bool RW)
 /* clean all installed packages on the sensor with the given prefix */
 bool SensorUpdater::sensorClean(void)
 {
-  SensorUpdater::VersionList listSensor;
+  VersionList listSensor;
 
   /* get all the installed packages with the given prefix */
   bool success = getVersionInstalled(listSensor, UpdateConfig::prefix, true);
@@ -404,20 +402,20 @@ bool SensorUpdater::sensorClean(void)
 }
 
 /* get a list of the newest versions from the repo */
-bool SensorUpdater::getUpdateList(SensorUpdater::VersionList &outList, const UpdateConfig::REPOS &repo)
+bool SensorUpdater::getUpdateList(VersionList &outList, const UpdateConfig::REPOS &repo)
 {
   /* get the newest version from the repos */
-  SensorUpdater::VersionList allPackages;
+  VersionList allPackages;
   bool success = getVersionsOnServer(allPackages, repo);
 
 
   //extract the newst version of all mandatory packages
-  SensorUpdater::VersionList updatePackages;
+  VersionList updatePackages;
 
   for(size_t i=0; i<UpdateConfig::repo_mandatory_pkgs.size(); i++)
   {
     /* extract all packages which are mandatory to install */
-    SensorUpdater::VersionList temp;
+    VersionList temp;
 
     for(size_t j=0; j<allPackages.size(); j++)
       if( allPackages[j].package_name == UpdateConfig::repo_mandatory_pkgs[i])
@@ -443,7 +441,7 @@ bool SensorUpdater::getUpdateList(SensorUpdater::VersionList &outList, const Upd
 }
 
 /* download packages defined in packageList from repo to local path */
-bool SensorUpdater::downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath)
+bool SensorUpdater::downloadPackagesToPath(VersionList &packageList, const std::string &localPath)
 {
   /* download and install the needed packages */
    WebClient web_client(UpdateConfig::hostname);
@@ -470,7 +468,7 @@ bool SensorUpdater::downloadPackagesToPath(SensorUpdater::VersionList &packageLi
 }
 
 /* install packages defined in packageList from local path to sensor*/
-bool SensorUpdater::installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath)
+bool SensorUpdater::installPackagesFromPath(VersionList &packageList, const std::string &localPath)
 {
   for(size_t i=0; i<packageList.size(); i++)
   {
@@ -517,6 +515,17 @@ bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::pr
 
   return true;
 }
+bool SensorUpdater::loadXmlCameraCalibrationFile(std::string local_calibration_filename) {
+    std::string remote_calibration_filename = std::string("/calibration.xml");
+    /* transfer calibration file from the sensor */
+    if(!pSsh_->getFile(remote_calibration_filename, local_calibration_filename))
+    {
+      std::cout << "failed.\n";
+      std::cout << "[ERROR]: Could not download calibration file from the sensor!\n";
+      return false;
+    }
+    return true;
+}
 
 /**
  * tries to load the camera calibration
@@ -527,26 +536,11 @@ bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::pr
  * @return vector of the saved configurations
  *
  */
-std::vector<visensor::ViCameraCalibration>  SensorUpdater::loadXmlCameraCalibration() {
+std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibration(std::string xml_filename) {
   std::vector<visensor::ViCameraCalibration> output_vector;
   boost::property_tree::ptree calibration_tree;
-//  std::string local_calibration_filename = std::string("/tmp/");
-//  std::string remote_calibration_filename = std::string("/calibration.xml");
-  std::string remote_calibration_filename = std::string("/home/lukas/catkin_ws/src/calibration.xml");
-  std::string local_calibration_filename = std::string("/home/lukas/catkin_ws/src/calibration.xml");
-  /* transfer calibration file from the sensor */
-//  if(!pSsh_->getFile(remote_calibration_filename, local_calibration_filename))
-//  {
-//    std::cout << "failed.\n";
-//    std::cout << "[ERROR]: Could not download calibration file from the sensor!\n";
-//    exit(1);
-//  }
 
-  std::ifstream t(local_calibration_filename);
-  std::cout << t.rdbuf();
-
-  std::cout <<  "calibration filename is: " << std::endl <<  local_calibration_filename<< std::endl;
-  if (!loadPropertyTree(local_calibration_filename, calibration_tree) ) {
+  if (!loadPropertyTree(xml_filename, calibration_tree) ) {
     std::cout << "failed.\n";
     std::cout << "[ERROR]: Could not load the calibration file!\n";
     exit(1);
@@ -558,9 +552,6 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::loadXmlCameraCalibrat
     std::vector<std::string> elements;
     boost::split(elements, iter.first, boost::is_any_of("_"));
 
-    std::cout << elements.size() << " elements were found" << std::endl;
-
-    std::cout <<" first element is:" << elements[0] << std::endl;
     if( (elements.size() == 3) && (elements[0] == "cam") ) {
       try
       {
@@ -571,7 +562,6 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::loadXmlCameraCalibrat
         //build childtree name
         std::string cam_id_str = boost::lexical_cast<std::string>(calibration.cam_id_);
         std::string slot_str = boost::lexical_cast<std::string>(std::stoi(elements[2]));
-        std::cout <<" child_tree:" <<  std::string("cam_") + cam_id_str + std::string("_") + slot_str + std::string(".") << std::endl;
         std::string child_tree = std::string("cam_") + cam_id_str + std::string("_") + slot_str + std::string(".");
 
         //load data
@@ -611,60 +601,100 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::loadXmlCameraCalibrat
       output_vector.push_back(calibration);
     }
   }
-  std::cout << "output_vector is: " << output_vector.size() << "\n";
   return output_vector;
 }
 
 bool SensorUpdater::convertCalibration() {
-  visensor::ViSensorDriver drv;
-  visensor::ViSensorDriver::Impl* privat_drv = drv.getPrivateApiAccess();
-  try {
-    drv.init();
-  }
-  catch (visensor::exceptions const &ex) {
-    std::cout << ex.what() << "\n";
-    exit(1);
+  visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<visensor::ViSensorConfiguration>(pFile_transfer_);
+  std::cout << "Convert calibration to new format ... ";
+
+  std::string tmp_calibration_filename("/tmp/calibration.xml");
+  if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
+    std::cout <<  "no calibration file was found, assume that the sensor is not yet calibrate" << std::endl;
+    return true;
   }
 
-  std::vector<visensor::ViCameraCalibration> calibration_list = loadXmlCameraCalibration();
+  // try to load existing configuration already saved in the new format
+  if(config_server->loadConfig() == false) {
+    std::cout <<  "no new configurations were found, assume that the sensor has no" << std::endl;
+  }
+
+  std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
   if (calibration_list.size() == 0) {
+    std::cout << "failed\n";
     std::cout <<  "no calibration were found" << std::endl;
     exit(1);
   }
   for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();  it != calibration_list.end(); ++it) {
-    std::cout <<"save camera calibration for cam :" << it->cam_id_ << std::endl;
     // \todo(lschmid) Does it make sense to clean calibration before setting it??
-    privat_drv->cleanCameraCalibrations(static_cast<SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
+    config_server->cleanCameraCalibration(static_cast<SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
                                         visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
                                         visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
-    if (it->slot_id_ == 0) {
-      if(privat_drv->setCameraFactoryCalibration(*it) == false) {
-        std::cout << "Calibration upload failed!\n";
-        exit(1);
-      }
-    }
-    else {
-      if(drv.setCameraCalibration(*it) == false) {
-        std::cout << "Calibration upload failed!\n";
-        exit(1);
-      }
+
+    if(config_server->setCameraCalibration(*it) == false) {
+      std::cout << "failed\n";
+      std::cout << "Setting calibration failed!\n";
+      exit(1);
     }
   }
+  if(config_server->saveConfig() == false) {
+    std::cout << "failed\n";
+    std::cout << "Calibration upload failed!\n";
+    exit(1);
+  }
+  std::cout << "done." << std::endl;
   return true;
 }
 
-/* remove all old packages and install the newest version of all packages in the repo which are mandatory */
-bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
-{
-  SensorUpdater::VersionList list;
-  SensorUpdater::VersionList currentList;
-  VersionEntry linux_embedded_entry;
-  std::string localPath = std::string("/tmp/");
+bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList new_list) {
 
+  VersionEntry linux_embedded_entry;
   VersionEntry version_of_cali_change;
   version_of_cali_change.version_major = 2;
   version_of_cali_change.version_minor = 0;
   version_of_cali_change.version_patch = 0;
+  //check if the calibration need to be converted
+  if (old_list.size() == 0) {
+    std::cout << "Try to copy possible available calibration ... ";
+
+    if (loadXmlCameraCalibrationFile("/tmp/calibration.xml")) {
+      std::cout << "done." << std::endl;
+      if (!convertCalibration()) {
+        std::cerr << "Could not convert calibration to new format" << std::endl;
+        return false;
+      }
+    }
+    else {
+      std::cout << "No calibration file found, nothing to convert" << std::endl;
+    }
+  }
+  else {
+    size_t i;
+    for (i = 0; i < old_list.size(); i++) {
+      if (old_list[i].package_name == "visensor-linux-embedded" ) {
+        break;
+      }
+    }
+    if ((i >= old_list.size()) && (old_list.size() != new_list.size())) {
+      std::cerr << "could not found linux embedded version" << std::endl;
+      return false;
+    }
+    if ( (old_list[i] < version_of_cali_change) && ( (new_list[i] > version_of_cali_change) || (new_list[i] == version_of_cali_change))) {
+      if (!convertCalibration()) {
+        std::cerr << "could not convert calibration to new format" << std::endl;
+        return false;
+      }
+    }
+  }
+  return true;
+
+}
+/* remove all old packages and install the newest version of all packages in the repo which are mandatory */
+bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
+{
+  VersionList list;
+  VersionList currentList;
+  std::string localPath = std::string("/tmp/");
 
   bool success = false;
 
@@ -677,9 +707,11 @@ bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
     {
       if(sensorClean())
       {
-        // update to newest version
-        if(installPackagesFromPath(list, localPath)) {
-          success = true;
+        if (checkCalibrationConvertion(currentList, list)) {
+          // update to newest version
+          if(installPackagesFromPath(list, localPath)) {
+            success = true;
+          }
         }
       }
     }
