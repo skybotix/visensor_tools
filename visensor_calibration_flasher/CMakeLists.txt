@@ -8,7 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall -std=c++0x -D__STRICT_ANSI__")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall -Wno-reorder -std=c++0x -D__STRICT_ANSI__")
 
 catkin_package(
   INCLUDE_DIRS ${catkin_INCLUDE_DIRS}
