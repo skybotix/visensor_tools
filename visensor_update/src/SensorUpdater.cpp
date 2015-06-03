@@ -509,6 +509,8 @@ bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::pr
     read_xml(calibration_filename, tree, boost::property_tree::xml_parser::trim_whitespace );
   } catch(std::exception const&  ex)
   {
+    std::cout << "failed.\n";
+    std::cout << "[ERROR]: Could not load the calibration file!\n";
     std::cout << "Exception: " << ex.what() << "\n";
     return false;
   }
@@ -541,8 +543,6 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
   boost::property_tree::ptree calibration_tree;
 
   if (!loadPropertyTree(xml_filename, calibration_tree) ) {
-    std::cout << "failed.\n";
-    std::cout << "[ERROR]: Could not load the calibration file!\n";
     exit(1);
   }
 
@@ -595,6 +595,7 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
 
       } catch(std::exception const&  ex)
       {
+        std::cout << "failed.\n";
         std::cout << "Exception: " << ex.what() << "\n";
         return output_vector;
       }
@@ -615,8 +616,13 @@ bool SensorUpdater::convertCalibration() {
   }
 
   // try to load existing configuration already saved in the new format
-  if(config_server->loadConfig() == false) {
-    std::cout <<  "no new configurations were found, assume that the sensor has no" << std::endl;
+  try {
+    config_server->loadConfig();
+  }
+  catch (visensor::exceptions const &ex) {
+    std::cout <<  "ignore" << std::endl
+        << "no new configurations were found, assume that the sensor has no" << std::endl;
+    std::cout <<  "Exception was: " << ex.what() << std::endl;
   }
 
   std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
@@ -625,21 +631,20 @@ bool SensorUpdater::convertCalibration() {
     std::cout <<  "no calibration were found" << std::endl;
     exit(1);
   }
-  for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();  it != calibration_list.end(); ++it) {
-    // \todo(lschmid) Does it make sense to clean calibration before setting it??
-    config_server->cleanCameraCalibration(static_cast<SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
-                                        visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
-                                        visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
+  try {
+    for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();  it != calibration_list.end(); ++it) {
+      config_server->cleanCameraCalibration(static_cast<SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
+                                          visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
+                                          visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
 
-    if(config_server->setCameraCalibration(*it) == false) {
-      std::cout << "failed\n";
-      std::cout << "Setting calibration failed!\n";
-      exit(1);
+      config_server->setCameraCalibration(*it);
     }
+    config_server->saveConfig();
   }
-  if(config_server->saveConfig() == false) {
-    std::cout << "failed\n";
-    std::cout << "Calibration upload failed!\n";
+  catch (visensor::exceptions const &ex) {
+    std::cout <<  "failed" << std::endl
+        << "Setting of the new calibration failed!" << std::endl;
+    std::cout <<  "Exception was: " << ex.what() << std::endl;
     exit(1);
   }
   std::cout << "done." << std::endl;
@@ -657,7 +662,7 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
   if (old_list.size() == 0) {
     std::cout << "Try to copy possible available calibration ... ";
 
-    if (loadXmlCameraCalibrationFile("/tmp/calibration.xml")) {
+    if (("/tmp/calibration.xml")) {
       std::cout << "done." << std::endl;
       if (!convertCalibration()) {
         std::cerr << "Could not convert calibration to new format" << std::endl;

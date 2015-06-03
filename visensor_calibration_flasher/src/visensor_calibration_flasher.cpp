@@ -211,10 +211,14 @@ int main(int argc, char **argv)
 
 
     // delete every factroy calibration of the corresponding cam
-    privat_drv->cleanCameraCalibrations(camera_id, 0, -1,
-                                        visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
-                                        visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
-    if(privat_drv->setCameraFactoryCalibration(camera_calibration) == false) {
+    try {
+      privat_drv->cleanCameraCalibrations(camera_id, 0, -1,
+                                          visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
+                                          visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
+      privat_drv->setCameraFactoryCalibration(camera_calibration);
+
+    }
+    catch(visensor::exceptions const &ex) {
       std::cout << "Calibration upload failed!\n";
       return 1;
     }
