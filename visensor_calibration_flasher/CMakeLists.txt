@@ -3,9 +3,10 @@ project(visensor_calibration_flasher)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp 
-  libvisensor
 )
 
+find_package(libvisensor 2.0.0 REQUIRED)
+  
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall -Wno-reorder -std=c++0x -D__STRICT_ANSI__")

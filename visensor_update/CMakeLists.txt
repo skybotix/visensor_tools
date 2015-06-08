@@ -6,10 +6,12 @@ cmake_minimum_required(VERSION 2.8.3)
 ############
 project(visensor_update)
 
+
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  libvisensor )
-  
+  roscpp 
+)
+
+find_package(libvisensor 2.0.0 REQUIRED)
 
 
 ############
