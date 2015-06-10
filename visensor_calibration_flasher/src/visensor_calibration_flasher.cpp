@@ -155,6 +155,11 @@ int main(int argc, char **argv)
       visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
       std::cout << "lens_model radial and params are: " << distortion_coeffs << std::endl;
       lens_model->setType();
+
+      if (distortion_coeffs.size() < lens_model->getCoefficients().size()) {
+        std::cout << "To few coeffizients are given for the equidistant projection model. Abort, abort!\n";
+        return 1;
+      }
       lens_model->k1_ = (double) distortion_coeffs[0];
       lens_model->k2_ = (double) distortion_coeffs[1];
       lens_model->r1_ = (double) distortion_coeffs[2];
@@ -163,6 +168,11 @@ int main(int argc, char **argv)
     else if (distortion_model == std::string("equidistant")) {
       visensor::ViCameraLensModelEquidistant::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
       lens_model->setType();
+
+      if (distortion_coeffs.size() < lens_model->getCoefficients().size()) {
+        std::cout << "To few coeffizients are given for the equidistant projection model. Abort, abort!\n";
+        return 1;
+      }
       lens_model->k1_ = (double) distortion_coeffs[0];
       lens_model->k2_ = (double) distortion_coeffs[1];
       lens_model->k3_ = (double) distortion_coeffs[2];
@@ -181,6 +191,11 @@ int main(int argc, char **argv)
     if (camera_model == std::string("pinhole")) {
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
       projection_model->setType();
+
+      if (intrinsics.size() < projection_model->getCoefficients().size()) {
+        std::cout << "To few coeffizients are given for the pinhole projection model. Abort, abort!\n";
+        return 1;
+      }
       projection_model->focal_length_u_ = (double) intrinsics[0];
       projection_model->focal_length_v_ = (double) intrinsics[1];
       projection_model->principal_point_u_ = (double) intrinsics[2];
@@ -189,11 +204,15 @@ int main(int argc, char **argv)
     else if (camera_model == std::string("omnidirectional")){
       visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
       projection_model->setType();
+
+      if (intrinsics.size() < projection_model->getCoefficients().size()) {
+        std::cout << "To few coeffizients are given for the omnidirectional projection model. Abort, abort!\n";
+        return 1;
+      }
       projection_model->focal_length_u_ = (double) intrinsics[0];
       projection_model->focal_length_v_ = (double) intrinsics[1];
       projection_model->principal_point_u_ = (double) intrinsics[2];
       projection_model->principal_point_v_ = (double) intrinsics[3];
-      // todo(lschmid) how to check if intrinsics has 5 attributes?
       projection_model->mirror_xi_ = (double) intrinsics[4];
     }
     else {
