@@ -203,7 +203,6 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
     try {
       package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
       package.imu_type = supported_imu_.at(boost::lexical_cast<unsigned int>( what_type[2] ));
-      std::cout << "parsed imu type and sensor type: " << static_cast<int>(package.imu_type) << ", "<< static_cast<int>(package.sensor_type) << std::endl;
     }
     catch (const std::exception& ex) {
       std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
@@ -220,7 +219,6 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
       try {
         package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
         package.imu_type = SUPPORTED_IMU::ADIS_16448;
-        std::cout << "parsed sensor type: " << static_cast<int>(package.sensor_type) << " imu its adis 16448" << std::endl;
       }
       catch (const std::exception& ex) {
         std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
@@ -237,7 +235,6 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
   if ( package == fpga_version_adis_16488 ) {
     package.sensor_type = SUPPORTED_FPGA_CONFIGS::NORMAL;
     package.imu_type = SUPPORTED_IMU::ADIS_16488;
-    std::cout << "Detected Adis16488 fpga version: " << static_cast<int>(package.sensor_type) << std::endl;
   }
   return true;
 }
@@ -848,7 +845,7 @@ bool SensorUpdater::sensorUpdate(REPOS &repo)
     default:
       break;
   }
-  std::cout << "Repo to update is: " << static_cast<int>(repo) << std::endl;
+
   if(getUpdateList(list, repo))
   {
     if(downloadPackagesToPath(list, localPath))
