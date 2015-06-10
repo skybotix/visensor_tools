@@ -43,7 +43,8 @@ void printArgs(void)
     std::cout << std::endl;
 
     std::cout << "  Available commands are:" << std::endl;
-    std::cout << "     update               updates the sensor to the newest software on the online repo" << std::endl;
+    std::cout << "     update               updates the sensor to the newest software on the online repo, check for the correct IMU first" << std::endl;
+    std::cout << "     update-16448         updates the sensor with ADIS 16448 to the newest software on the online repo" << std::endl;
     std::cout << "     update-16488         updates the sensor with ADIS 16488 to the newest software on the online repo" << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
@@ -86,6 +87,11 @@ bool cmdUpdate16488(SensorUpdater &updater)
   return update(updater, SensorUpdater::REPOS::REPO_16488_RELEASE);
 }
 
+bool cmdUpdate16448(SensorUpdater &updater)
+{
+  return update(updater, SensorUpdater::REPOS::REPO_16448_RELEASE);
+}
+
 bool cmdUpdateDevelop(SensorUpdater &updater)
 {
   return update(updater, SensorUpdater::REPOS::REPO_DEV);
@@ -94,6 +100,11 @@ bool cmdUpdateDevelop(SensorUpdater &updater)
 bool cmdUpdate16488Develop(SensorUpdater &updater)
 {
   return update(updater, SensorUpdater::REPOS::REPO_16488_DEV);
+}
+
+bool cmdUpdate16448Develop(SensorUpdater &updater)
+{
+  return update(updater, SensorUpdater::REPOS::REPO_16448_DEV);
 }
 
 bool cmdConvertCalibration(SensorUpdater &updater)
@@ -127,8 +138,10 @@ int main(int argc, char** argv)
   std::map<std::string, commandFunction> argCmds =
   {
       {"update", cmdUpdate},
+      {"update-16448", cmdUpdate16448},
       {"update-16488", cmdUpdate16488},
       {"update-devel", cmdUpdateDevelop},
+      {"update-16448-devel", cmdUpdate16448Develop},
       {"update-16488-devel", cmdUpdate16488Develop},
       {"convert-calibration", cmdConvertCalibration},
       {"clean", cmdClean},
