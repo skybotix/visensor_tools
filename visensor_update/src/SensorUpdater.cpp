@@ -41,12 +41,14 @@
 #include <boost/tokenizer.hpp>
 #include <boost/regex.hpp>
 
-#include <map>
 
 
-SensorUpdater::SensorUpdater(const std::string &hostname) {
-  pSsh_ =  boost::make_shared<visensor::SshConnection>(hostname, UpdateConfig::ssh_username, UpdateConfig::ssh_password);
+SensorUpdater::SensorUpdater(const std::string &hostname) //:
+//  possible_pkgs_(create_possible_pkgs_map())
+{
+  pSsh_ =  boost::make_shared<visensor::SshConnection>(hostname, sshUsername(), sshPassword());
   pFile_transfer_ =  boost::make_shared<visensor::FileTransfer>(pSsh_);
+
 }
 
 
@@ -137,15 +139,17 @@ bool SensorUpdater::getVersionInstalled(VersionList &outPackageList, const std::
 
 bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, UpdateConfig::REPOS repo)
 {
+
+bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo) {
   /* clear the output list*/
   outPackageList.clear();
 
   /* query the ftp server */
   std::string filelist;
-  std::string repo_ftppath = UpdateConfig::REPOS_PATH[ static_cast<size_t>( repo ) ];
+  std::string repo_ftppath = REPOS_PATH.at(repo);
 
   /* open ftp connection */
-  WebClient web_client(UpdateConfig::hostname);
+  WebClient web_client(hostname());
 
   bool success = web_client.dirList(repo_ftppath, filelist);
 
@@ -167,11 +171,11 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, UpdateConfi
     //parse package file names
     //typical line: visensor-linux-1.0.1-Linux.deb
     //design and check on: http://regexpal.com/
-    boost::regex expression("([A-Za-z0-9-]+)-([0-9]+)\\.([0-9]+)\\.([0-9]+)-([A-Za-z0-9-]+)\\.deb");
+    boost::regex version_expression("([A-Za-z0-9-]+)-([0-9]+)\\.([0-9]+)\\.([0-9]+)-([A-Za-z0-9-]+)\\.deb");
     boost::cmatch what;
 
     /* find matches */
-    if( regex_match(filename.c_str(), what, expression) )
+    if( regex_match(filename.c_str(), what, version_expression) )
     {
       // what[0] contains whole filename
       // what[1] contains the package name
@@ -187,15 +191,14 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, UpdateConfi
       package.version_patch = boost::lexical_cast<unsigned int>( what[4] );
 
       /* store the relative ftp path (if we want to downlaod it later...) */
-      package.path = UpdateConfig::REPOS_PATH[ static_cast<size_t>( repo ) ] + "/" + filename;
-
+      package.path = REPOS_PATH.at( repo ) + "/" + filename;
 
       /* store the packages */
       outPackageList.push_back( package );
 
     } else {
       //regex match failed (file is not a valid package name...)
-      //std::cout << "regex failed: " << filename.c_str() << "\n";
+      std::cout << "regex failed: " << filename.c_str() << "\n";
     }
   }
 
@@ -206,7 +209,7 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, UpdateConfi
 bool SensorUpdater::printVersionsInstalled(void)
 {
   VersionList listSensor;
-  bool success = getVersionInstalled(listSensor, UpdateConfig::prefix);
+  bool success = getVersionInstalled(listSensor);
 
   if(!success)
   {
@@ -379,7 +382,7 @@ bool SensorUpdater::sensorClean(void)
   VersionList listSensor;
 
   /* get all the installed packages with the given prefix */
-  bool success = getVersionInstalled(listSensor, UpdateConfig::prefix, true);
+  bool success = getVersionInstalled(listSensor);
 
   if(!success)
   {
@@ -402,7 +405,7 @@ bool SensorUpdater::sensorClean(void)
 }
 
 /* get a list of the newest versions from the repo */
-bool SensorUpdater::getUpdateList(VersionList &outList, const UpdateConfig::REPOS &repo)
+bool SensorUpdater::getUpdateList(VersionList &outList, const REPOS &repo)
 {
   /* get the newest version from the repos */
   VersionList allPackages;
@@ -412,19 +415,21 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const UpdateConfig::REPO
   //extract the newst version of all mandatory packages
   VersionList updatePackages;
 
-  for(size_t i=0; i<UpdateConfig::repo_mandatory_pkgs.size(); i++)
-  {
+
+  for (parse_function_map::const_iterator iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter) {
+
     /* extract all packages which are mandatory to install */
     VersionList temp;
 
-    for(size_t j=0; j<allPackages.size(); j++)
-      if( allPackages[j].package_name == UpdateConfig::repo_mandatory_pkgs[i])
+    for(size_t j=0; j<allPackages.size(); j++){
+      if( allPackages[j].package_name == iter->first)
         temp.push_back( allPackages[j] );
+    }
 
     /* check we found the mandatory package */
     if(temp.size()<1)
     {
-      std::cout << "[ERROR]: Could not find the required package \"" << UpdateConfig::repo_mandatory_pkgs[i] << "\" in the online repository!\n";
+      std::cout << "[ERROR]: Could not find the required package \"" << iter->first << "\" in the online repository!\n";
       exit(1);
     }
 
@@ -433,8 +438,8 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const UpdateConfig::REPO
 
     /* add the newest version of the mandatory package to the update list */
     updatePackages.push_back( temp.back() );
-  }
 
+  }
   outList = updatePackages;
 
   return success;

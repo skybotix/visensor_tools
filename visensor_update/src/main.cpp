@@ -45,7 +45,6 @@ void printArgs(void)
     std::cout << "  Available commands are:" << std::endl;
     std::cout << "     update               updates the sensor to the newest software on the online repo" << std::endl;
     std::cout << "     update-16488         updates the sensor with ADIS 16488 to the newest software on the online repo" << std::endl;
-    std::cout << "     convert-calibration  converts the calibration format from libvisensor version 1.2.X to 2.0.X"  << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
@@ -58,7 +57,7 @@ void printArgs(void)
     std::cout << std::endl;
 }
 
-bool update(SensorUpdater &updater, const UpdateConfig::REPOS &repo)
+bool update(SensorUpdater &updater, SensorUpdater::REPOS repo)
 {
   /* print version before update */
   std::cout << "Before update:\n";
@@ -79,22 +78,22 @@ bool update(SensorUpdater &updater, const UpdateConfig::REPOS &repo)
 
 bool cmdUpdate(SensorUpdater &updater)
 {
-  return update(updater, UpdateConfig::REPOS::REPO_RELEASE);
+  return update(updater, SensorUpdater::REPOS::REPO_RELEASE);
 }
 
 bool cmdUpdate16488(SensorUpdater &updater)
 {
-  return update(updater, UpdateConfig::REPOS::REPO_16488_RELEASE);
+  return update(updater, SensorUpdater::REPOS::REPO_16488_RELEASE);
 }
 
 bool cmdUpdateDevelop(SensorUpdater &updater)
 {
-  return update(updater, UpdateConfig::REPOS::REPO_DEV);
+  return update(updater, SensorUpdater::REPOS::REPO_DEV);
 }
 
 bool cmdUpdate16488Develop(SensorUpdater &updater)
 {
-  return update(updater, UpdateConfig::REPOS::REPO_16488_DEV);
+  return update(updater, SensorUpdater::REPOS::REPO_16488_DEV);
 }
 
 bool cmdConvertCalibration(SensorUpdater &updater)

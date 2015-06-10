@@ -34,11 +34,11 @@
 #define SENSORUPDATER_HPP_
 #include <vector>
 #include <tuple>
+#include <map>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include "update_config.hpp"
 #include "communication_layers/WebClient.hpp"
 
 // include from libvisensor
@@ -50,6 +50,17 @@
 class SensorUpdater {
  public:
 
+  /* where are the repos on the ftp server (ftp relative path) */
+  enum class REPOS
+    {
+      REPO_RELEASE,
+      REPO_DEV,
+      REPO_16448_RELEASE,
+      REPO_16448_DEV,
+      REPO_16488_RELEASE,
+      REPO_16488_DEV
+    };
+
   /* some typedefs */
   struct VersionEntry {
     std::string package_name;
@@ -57,6 +68,23 @@ class SensorUpdater {
     unsigned int version_minor;
     unsigned int version_patch;
     std::string path;
+
+    VersionEntry() :
+        package_name(""),
+        version_major(0),
+        version_minor(0),
+        version_patch(0),
+        path("")
+    {
+    }
+    VersionEntry(unsigned int major, unsigned int minor, unsigned int patch) :
+        package_name(""),
+        version_major(major),
+        version_minor(minor),
+        version_patch(patch),
+        path("")
+    {
+    }
 
     /* lexicographical version comparison */
     bool operator<(const VersionEntry& rhs) const
@@ -88,11 +116,11 @@ class SensorUpdater {
 
   /* repo functions */
   bool getVersionInstalled(VersionList &outPackageList, const std::string &prefix, bool dontParseVersion=false);
-  bool getVersionsOnServer(SensorUpdater::VersionList &outPackageList, UpdateConfig::REPOS repo);
+  bool getVersionsOnServer(SensorUpdater::VersionList &outPackageList, REPOS repo);
   bool printVersionsInstalled(void);
-  bool printVersionsRepo(UpdateConfig::REPOS repo);
+  bool printVersionsRepo(REPOS repo);
 
-  bool getUpdateList(SensorUpdater::VersionList &outList, const UpdateConfig::REPOS &repo);
+  bool getUpdateList(SensorUpdater::VersionList &outList, const REPOS &repo);
 
 
   /* package functions */
@@ -118,13 +146,47 @@ class SensorUpdater {
 
 
   /* high level update functions */
-  bool sensorUpdate(const UpdateConfig::REPOS &repo);
+  bool sensorUpdate(REPOS &repo);
+
 
 
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
 
+
+
+
+
+
+  /* sensor ssh login configuration */
+  const std::string sshUsername() const {
+      return "root";
+  }
+  const std::string hostname() const {
+      return "http://skybotix.com/downloads/vi-firmware";
+  }
+
+  /* update repo configuration */
+  const std::string sshPassword() const {
+      return "";
+  }
+
+  /*standard prefix for debian package filenames */
+  const std::string prefix() const {
+      return "visensor";
+  }
+
+};
+
+static const std::map< SensorUpdater::REPOS, std::string> REPOS_PATH = {
+  {  SensorUpdater::REPOS::REPO_RELEASE, std::string("release") },
+  {  SensorUpdater::REPOS::REPO_DEV, std::string("develop") },
+  {  SensorUpdater::REPOS::REPO_16448_RELEASE, std::string("release") },
+  {  SensorUpdater::REPOS::REPO_16448_DEV, std::string("develop") },
+  {  SensorUpdater::REPOS::REPO_16488_RELEASE, std::string("release/adis16488") },
+  {  SensorUpdater::REPOS::REPO_16488_DEV, std::string("develop/adis16488") }
+  };
 };
 
 #endif /* SENSORUPDATER_HPP_ */
