@@ -58,19 +58,37 @@ SensorUpdater::~SensorUpdater()
 
 //function returns a vector of pairs with (package_name, version)
 //for all packages that start with the given packagename prefix
-bool SensorUpdater::getVersionInstalled(VersionList &outPackageList, const std::string &prefix, bool dontParseVersion)
+bool SensorUpdater::getVersionInstalled(VersionList &outPackageList)
 {
-  int exitcode=127;
+  //clear the output VersionList
+  outPackageList.clear();
 
+  for (parse_function_map::const_iterator iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter) {
+
+    VersionEntry package;
+    if (!( (this->*(iter->second))(package, iter->first) )) {
+      std::cout << "Failed to parse the version of the package " << iter->first << std::endl;
+//      return false;
+    }
+    outPackageList.push_back(package);
+  }
+  return true;
+}
+
+
+bool SensorUpdater::parseVersionDefault(VersionEntry& package, const std::string &prefix)  {
   /* run command */
+  int exitcode=127;
   std::string output;
   pSsh_->runCommand( std::string("dpkg -l | grep ") + prefix,
                      output,
                      exitcode );
 
-  //clear the output VersionList
-  outPackageList.clear();
 
+  if (exitcode != 0) {
+    std::cout << "failed to run " <<  std::string("dpkg -l | grep ") + prefix << std::endl;
+    return false;
+  }
   //typical line to parse:
   //  ii  vim                                         2:7.3.547-4ubuntu1.1                       amd64        Vi IMproved - enhanced vi editor
   typedef boost::tokenizer<boost::char_separator<char> >  tokenizer;
@@ -89,22 +107,15 @@ bool SensorUpdater::getVersionInstalled(VersionList &outPackageList, const std::
      //typical line: visensor-linux-1.0.1-Linux.deb
      //design and check on: http://regexpal.com/
 
-     boost::regex *expression;
+     //exract version number
+     boost::regex expression("[\\s\\t]*[A-Za-z0-9]*[\\s\\t]+([A-Za-z0-9\\-]+)[\\s\\t]+([0-9]+)\\.([0-9]+)\\.([0-9]+)[\\s\\t]+([A-Za-z0-9-]+)[A-Za-z0-9\\-\\.\\s.()]*");
 
-     if(!dontParseVersion)
-     {
-       //exract version number
-       expression = new boost::regex("[\\s\\t]*[A-Za-z0-9]*[\\s\\t]+([A-Za-z0-9\\-]+)[\\s\\t]+([0-9]+)\\.([0-9]+)\\.([0-9]+)[\\s\\t]+([A-Za-z0-9-]+)[A-Za-z0-9\\-\\.\\s.()]*");
-     } else {
-       //do not extract version number
-       expression = new boost::regex("[\\s\\t]*[A-Za-z0-9]{2}[\\s\\t]+([A-Za-z0-9\\-]+)[\\s\\t]+([A-Za-z0-9\\-\\.\\s.()]+)");
-     }
 
 
      boost::cmatch what;
 
      /* find matches */
-     if( regex_match(line.c_str(), what, *expression) )
+     if( regex_match(line.c_str(), what, expression) )
      {
        // what[0] contains whole filename
        // what[1] contains the package name
@@ -112,33 +123,124 @@ bool SensorUpdater::getVersionInstalled(VersionList &outPackageList, const std::
        // what[3] contains the minor version number
        // what[4] contains the patch version number
        // what[5] contains the arch
-
-       VersionEntry package;
        package.package_name = what[1];
-       if(!dontParseVersion)
-       {
-         package.version_major = boost::lexical_cast<unsigned int>( what[2] );
-         package.version_minor = boost::lexical_cast<unsigned int>( what[3] );
-         package.version_patch = boost::lexical_cast<unsigned int>( what[4] );
-       }
-
-       /* add package to the list of packages */
-       outPackageList.push_back( package );
-
-     } else {
+       package.version_major = boost::lexical_cast<unsigned int>( what[2] );
+       package.version_minor = boost::lexical_cast<unsigned int>( what[3] );
+       package.version_patch = boost::lexical_cast<unsigned int>( what[4] );
+       /* assume that there is only one package*/
+       return true;
+     }
+     else {
        //regex match failed (file is not a valid package name...)
        std::cout << "regex failed: " << line.c_str() << "\n";
      }
   }
 
   /* return true if exit-code = 0 */
-  return true;
+  return false;
 }
 
+bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::string &prefix) {
+  std::string output;
+  int exitcode=127;
+
+  /* run command */
+  pSsh_->runCommand( std::string("/home/root/fpga/fpga_version.bash"),
+                     output,
+                     exitcode );
 
 
-bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, UpdateConfig::REPOS repo)
-{
+  if (exitcode != 0) {
+    std::cout << "failed to run " <<  "/home/root/fpga/fpga_version.bash" << std::endl;
+    return false;
+  }
+
+  //typical lines to parse:
+  //Version:        <Major.Minor.Patch>
+  //Note:           version_<SensorType>ADIS<ImuType>
+  // or:
+  //Version:        <Major.Minor.Patch>
+  //Note:           version_<SensorType>
+  typedef boost::tokenizer<boost::char_separator<char> >  tokenizer;
+  boost::char_separator<char> sep("\n");
+  tokenizer tokens(output, sep);
+
+  tokenizer::iterator tok_iter = tokens.begin();
+  std::string version_line = *tok_iter;
+  std::string note_line = *(++tok_iter);
+
+  //exract version number
+  boost::regex version_expression("[\\s\\t]*[A-Za-z:]*[\\s\\t]+([0-9]+)\\.([0-9]+)\\.([0-9]+)[\\s\\t]*[A-Za-z0-9\\-\\.\\s.()]*");
+
+  boost::cmatch what;
+
+  /* find matches */
+  if( regex_match(version_line.c_str(), what, version_expression) )
+  {
+   // what[0] contains whole filename
+   // what[1] contains the major version number
+   // what[2] contains the minor version number
+   // what[3] contains the patch version number
+   package.package_name = "visensor-fpga-bitstream";
+   package.version_major = boost::lexical_cast<unsigned int>( what[1] );
+   package.version_minor = boost::lexical_cast<unsigned int>( what[2] );
+   package.version_patch = boost::lexical_cast<unsigned int>( what[3] );
+  }
+  else {
+   //regex match failed (file is not a valid package name...)
+   std::cout << "regex failed: " << version_line.c_str() << "\n";
+   return false;
+  }
+
+  boost::regex type_expression("[\\s\\t]*[A-Za-z:]*[\\s\\t]+[A-Za-z]*_([a-z]+)_[A-Za-z]*([0-9]+)");
+
+  /* find matches */
+  boost::cmatch what_type;
+  if( regex_match(note_line.c_str(), what_type, type_expression) )  {
+   // what_type[0] contains whole filename
+   // what_type[1] contains the sensor type: a => normal configuration, c => flir configuration
+   // what_type[2] contains the IMU type: 16448 or 16488
+    try {
+      package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
+      package.imu_type = supported_imu_.at(boost::lexical_cast<unsigned int>( what_type[2] ));
+      std::cout << "parsed imu type and sensor type: " << static_cast<int>(package.imu_type) << ", "<< static_cast<int>(package.sensor_type) << std::endl;
+    }
+    catch (const std::exception& ex) {
+      std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
+    }
+  }
+  else {
+
+    boost::regex type_expression("[\\s\\t]*[A-Za-z:]*[\\s\\t]+[A-Za-z]*_([a-z]+)");
+    /* find matches */
+    boost::cmatch what_type;
+    if( regex_match(note_line.c_str(), what_type, type_expression) ) {
+      // what_type[0] contains whole filename
+      // what_type[1] contains the sensor type: a => normal configuration, c => flir configuration
+      try {
+        package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
+        package.imu_type = SUPPORTED_IMU::ADIS_16448;
+        std::cout << "parsed sensor type: " << static_cast<int>(package.sensor_type) << " imu its adis 16448" << std::endl;
+      }
+      catch (const std::exception& ex) {
+        std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
+      }
+    }
+    else {
+      //regex match failed (file is not a valid package name...)
+      std::cout << "failed to parse the fpga bitstream type: " << note_line.c_str() << "\n";
+      return false;
+    }
+  }
+  // check if version was for the ADIS 16488
+  VersionEntry fpga_version_adis_16488(1,0,22);
+  if ( package == fpga_version_adis_16488 ) {
+    package.sensor_type = SUPPORTED_FPGA_CONFIGS::NORMAL;
+    package.imu_type = SUPPORTED_IMU::ADIS_16488;
+    std::cout << "Detected Adis16488 fpga version: " << static_cast<int>(package.sensor_type) << std::endl;
+  }
+  return true;
+}
 
 bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo) {
   /* clear the output list*/
@@ -242,7 +344,7 @@ bool SensorUpdater::printVersionsInstalled(void)
   return true;
 }
 
-bool SensorUpdater::printVersionsRepo(UpdateConfig::REPOS repo)
+bool SensorUpdater::printVersionsRepo(REPOS repo)
 {
   VersionList listFtp;
   bool success = getVersionsOnServer(listFtp, repo);
@@ -449,7 +551,7 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const REPOS &repo)
 bool SensorUpdater::downloadPackagesToPath(VersionList &packageList, const std::string &localPath)
 {
   /* download and install the needed packages */
-   WebClient web_client(UpdateConfig::hostname);
+   WebClient web_client(hostname());
 
    for(size_t i=0; i<packageList.size(); i++)
    {
@@ -659,10 +761,7 @@ bool SensorUpdater::convertCalibration() {
 bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList new_list) {
 
   VersionEntry linux_embedded_entry;
-  VersionEntry version_of_cali_change;
-  version_of_cali_change.version_major = 2;
-  version_of_cali_change.version_minor = 0;
-  version_of_cali_change.version_patch = 0;
+  VersionEntry version_of_cali_change(2,0,0);
   //check if the calibration need to be converted
   if (old_list.size() == 0) {
     std::cout << "Try to copy possible available calibration ... ";
@@ -700,7 +799,7 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
 
 }
 /* remove all old packages and install the newest version of all packages in the repo which are mandatory */
-bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
+bool SensorUpdater::sensorUpdate(REPOS &repo)
 {
   VersionList list;
   VersionList currentList;
@@ -708,11 +807,50 @@ bool SensorUpdater::sensorUpdate(const UpdateConfig::REPOS &repo)
 
   bool success = false;
 
+  if(!getVersionInstalled(currentList)) {
+    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
+    return false;
+  }
+
+  // check if fpga version is supported
+  VersionEntry fpga_version;
+  if ((this->*(possible_pkgs_.at("visensor-fpga-bitstream")))(fpga_version, "visensor-fpga-bitstream") ) {
+    if (fpga_version.sensor_type != SUPPORTED_FPGA_CONFIGS::NORMAL) {
+      std::cout << "Please use the manual update. The update tool does not support your FPGA configuration" << std::endl;
+      return false;
+    }
+  }
+  else {
+    std::cout << "failed to get fpga config" << std::endl;
+  }
+
+  switch (repo) {
+    case REPOS::REPO_RELEASE:
+      if (fpga_version.imu_type == SUPPORTED_IMU::ADIS_16488) {
+        repo = REPOS::REPO_16488_RELEASE;
+      }
+      else {
+        repo = REPOS::REPO_16448_RELEASE;
+      }
+      break;
+    case REPOS::REPO_DEV:
+      if (fpga_version.imu_type == SUPPORTED_IMU::ADIS_16488) {
+        repo = REPOS::REPO_16488_DEV;
+      }
+      else {
+        repo = REPOS::REPO_16448_DEV;
+      }
+      break;
+    case REPOS::REPO_16448_RELEASE:
+    case REPOS::REPO_16448_DEV:
+    case REPOS::REPO_16488_RELEASE:
+    case REPOS::REPO_16488_DEV:
+    default:
+      break;
+  }
+  std::cout << "Repo to update is: " << static_cast<int>(repo) << std::endl;
   if(getUpdateList(list, repo))
   {
-    if(!getVersionInstalled(currentList,  UpdateConfig::prefix, false))
-      return false;
-
     if(downloadPackagesToPath(list, localPath))
     {
       if(sensorClean())
