@@ -76,7 +76,7 @@ int main(int argc, char **argv)
   try {
     drv.init();
   } catch (visensor::exceptions const &ex) {
-    std::cout << ex.what() << "\n";
+    std::cerr << ex.what() << "\n";
     exit(1);
   }
   std::vector<visensor::SensorId::SensorId> list_of_camera_ids = drv.getListOfCameraIDs();
@@ -153,8 +153,12 @@ int main(int argc, char **argv)
     std::cout << "distortion_model is: " << distortion_model << std::endl;
     if (distortion_model == std::string("radtan"))  {
       visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
-      std::cout << "lens_model radial and params are: " << distortion_coeffs << std::endl;
       lens_model->setType();
+
+      if (distortion_coeffs.size() < lens_model->getCoefficients().size()) {
+        std::cerr << "To few coeffizients are given for the radtan projection model. Abort, abort!\n";
+        return 1;
+      }
       lens_model->k1_ = (double) distortion_coeffs[0];
       lens_model->k2_ = (double) distortion_coeffs[1];
       lens_model->r1_ = (double) distortion_coeffs[2];
@@ -163,17 +167,20 @@ int main(int argc, char **argv)
     else if (distortion_model == std::string("equidistant")) {
       visensor::ViCameraLensModelEquidistant::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
       lens_model->setType();
+
+      if (distortion_coeffs.size() < lens_model->getCoefficients().size()) {
+        std::cerr << "To few coeffizients are given for the equidistant projection model. Abort, abort!\n";
+        return 1;
+      }
       lens_model->k1_ = (double) distortion_coeffs[0];
       lens_model->k2_ = (double) distortion_coeffs[1];
       lens_model->k3_ = (double) distortion_coeffs[2];
       lens_model->k4_ = (double) distortion_coeffs[3];
     }
     else {
-      std::cout << "Distortion Model is not supported. Abort, abort!\n";
+      std::cerr << "Distortion Model is not supported. Abort, abort!\n";
       return 1;
     }
-
-    std::cout << "lens model is: " << static_cast<int>(camera_calibration.lens_model_->type_) << std::endl;
 
     camera_model.assign(cam_params["camera_model"]);
     XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
@@ -181,6 +188,11 @@ int main(int argc, char **argv)
     if (camera_model == std::string("pinhole")) {
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
       projection_model->setType();
+
+      if (intrinsics.size() < projection_model->getCoefficients().size()) {
+        std::cerr << "To few coeffizients are given for the pinhole projection model. Abort, abort!\n";
+        return 1;
+      }
       projection_model->focal_length_u_ = (double) intrinsics[0];
       projection_model->focal_length_v_ = (double) intrinsics[1];
       projection_model->principal_point_u_ = (double) intrinsics[2];
@@ -189,15 +201,19 @@ int main(int argc, char **argv)
     else if (camera_model == std::string("omnidirectional")){
       visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
       projection_model->setType();
+
+      if (intrinsics.size() < projection_model->getCoefficients().size()) {
+        std::cerr << "To few coeffizients are given for the omnidirectional projection model. Abort, abort!\n";
+        return 1;
+      }
       projection_model->focal_length_u_ = (double) intrinsics[0];
       projection_model->focal_length_v_ = (double) intrinsics[1];
       projection_model->principal_point_u_ = (double) intrinsics[2];
       projection_model->principal_point_v_ = (double) intrinsics[3];
-      // todo(lschmid) how to check if intrinsics has 5 attributes?
       projection_model->mirror_xi_ = (double) intrinsics[4];
     }
     else {
-      std::cout << "Current Camera Model is supported. Abort, abort!\n";
+      std::cerr << "Current Camera Model is supported. Abort, abort!\n";
       return 1;
     }
 
@@ -219,11 +235,11 @@ int main(int argc, char **argv)
 
     }
     catch(visensor::exceptions const &ex) {
-      std::cout << "Calibration upload failed!\n";
+      std::cerr << "Calibration upload failed!\n";
       return 1;
     }
   }
-  std::cout << "Calibration upload succeeded!\n"; 
+  std::cerr << "Calibration upload succeeded!\n";
   return 0;
 }
 
