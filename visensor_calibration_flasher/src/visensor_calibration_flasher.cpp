@@ -43,7 +43,7 @@ void printSensorConfig(const visensor::ViCameraCalibration& config){
   std::cout << config.projection_model_->type_name_ << std::endl;
   std::cout << "\tCoefficient:\n\t\t";
   std::vector<double> coefficients = config.projection_model_->getCoefficients();
-  for (int i = 0; i < coefficients.size(); ++i){
+  for (unsigned int i = 0; i < coefficients.size(); ++i){
     std::cout << coefficients[i] << " ";
   }
 
@@ -52,15 +52,15 @@ void printSensorConfig(const visensor::ViCameraCalibration& config){
   std::cout << config.lens_model_->type_name_ << std::endl;
   std::cout << "\tCoefficient: \n\t\t";
   coefficients = config.lens_model_->getCoefficients();
-  for (int i = 0; i < coefficients.size(); ++i){
+  for (unsigned int i = 0; i < coefficients.size(); ++i){
     std::cout << coefficients[i] << " ";
   }
   std::cout << "\nR:\n";
-  for (int i = 0; i < config.R_.size()/3; ++i){
+  for (unsigned int i = 0; i < config.R_.size()/3; ++i){
     std::cout  << "\t" << config.R_[i] << "\t" << config.R_[i + 3] << "\t" << config.R_[i + 6] << "\n";
   }
   std::cout << "T:\n";
-  for (int i = 0; i< config.t_.size(); ++i){
+  for (unsigned int i = 0; i< config.t_.size(); ++i){
     std::cout << "\t" << config.t_[i] << "\t";
   }
   std::cout << std::endl;
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
       visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
       lens_model->setType();
 
-      if (distortion_coeffs.size() < lens_model->getCoefficients().size()) {
+      if (static_cast<unsigned int>(distortion_coeffs.size()) < lens_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the radtan projection model. Abort, abort!\n";
         return 1;
       }
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
       visensor::ViCameraLensModelEquidistant::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
       lens_model->setType();
 
-      if (distortion_coeffs.size() < lens_model->getCoefficients().size()) {
+      if (static_cast<unsigned int>(distortion_coeffs.size()) < lens_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the equidistant projection model. Abort, abort!\n";
         return 1;
       }
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
       projection_model->setType();
 
-      if (intrinsics.size() < projection_model->getCoefficients().size()) {
+      if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the pinhole projection model. Abort, abort!\n";
         return 1;
       }
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
       visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
       projection_model->setType();
 
-      if (intrinsics.size() < projection_model->getCoefficients().size()) {
+      if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the omnidirectional projection model. Abort, abort!\n";
         return 1;
       }
@@ -236,9 +236,7 @@ int main(int argc, char **argv)
 
     // delete every factroy calibration of the corresponding cam
     try {
-      privat_drv->cleanCameraCalibrations(camera_id, 0, -1,
-                                          visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
-                                          visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
+      privat_drv->cleanCameraCalibrations(camera_id, 0);
 
       printSensorConfig(camera_calibration);
       privat_drv->setCameraFactoryCalibration(camera_calibration);
