@@ -63,6 +63,13 @@ void printSensorConfig(const visensor::ViCameraCalibration& config){
   for (unsigned int i = 0; i< config.t_.size(); ++i){
     std::cout << "\t" << config.t_[i] << "\t";
   }
+
+
+  std::cout << "\nresolution is:\n\t" << config.resolution_[0] << ", " << config.resolution_[1] << std::endl;
+
+
+  std::cout << "flip_camera:\n\t" << config.is_flipped_ << std::endl;
+
   std::cout << std::endl;
 }
 
@@ -135,7 +142,6 @@ int main(int argc, char **argv)
     else{
       camera_calibration.is_flipped_ = true;
     }
-    std::cout << "flip_camera: " << camera_calibration.is_flipped_ << std::endl;
     T_C_I = cam_params["T_cam_imu"];
     //EIGEN USES COLUMN MAJOR ORDER!
     camera_calibration.R_.resize(9);
@@ -158,7 +164,6 @@ int main(int argc, char **argv)
 
     distortion_model.assign(cam_params["distortion_model"]);
     XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
-    std::cout << "distortion_model is: " << distortion_model << std::endl;
     if (distortion_model == std::string("radtan"))  {
       visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
       lens_model->setType();
@@ -192,7 +197,6 @@ int main(int argc, char **argv)
 
     camera_model.assign(cam_params["camera_model"]);
     XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
-    std::cout << "projection_model is: " << camera_model << std::endl;
     if (camera_model == std::string("pinhole")) {
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
       projection_model->setType();
@@ -226,10 +230,8 @@ int main(int argc, char **argv)
     }
 
     XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
-    std::cout << "resolution is: " << resolution << std::endl;
     camera_calibration.resolution_[0] = (int) resolution[0];
     camera_calibration.resolution_[1] = (int) resolution[1];
-
 
     camera_calibration.slot_id_ = 0;
 
