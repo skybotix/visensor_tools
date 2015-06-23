@@ -711,6 +711,7 @@ bool SensorUpdater::convertCalibration() {
   std::string tmp_calibration_filename("/tmp/calibration.xml");
   if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
     std::cout <<  "no calibration file was found, assume that the sensor is not yet calibrate" << std::endl;
+    std::cout << std::endl;
     return true;
   }
 
@@ -722,7 +723,7 @@ bool SensorUpdater::convertCalibration() {
     std::cout <<  "..." << std::endl
         << "no new configurations were found, assume that the sensor has no" << std::endl;
     std::cout <<  "Exception was: " << ex.what() << std::endl;
-    std::cout <<  "continue ... " << ex.what() << std::endl;
+    std::cout <<  "continue ... " << std::endl;
   }
 
   std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
@@ -750,6 +751,7 @@ bool SensorUpdater::convertCalibration() {
     exit(1);
   }
   std::cout << "done." << std::endl;
+  std::cout << std::endl;
   return true;
 }
 
