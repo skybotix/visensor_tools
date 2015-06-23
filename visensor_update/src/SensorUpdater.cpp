@@ -507,8 +507,9 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packa
 
   //extract the newst version of all mandatory packages
   VersionList updatePackages;
-  int i = 0;
-  for (parse_function_map::const_iterator iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter, ++i) {
+  int i;
+  parse_function_map::const_iterator iter;
+  for (iter =  possible_pkgs_.begin(), i = 0; iter != possible_pkgs_.end(); ++iter, ++i) {
     // extract all packages which are mandatory to install
     VersionList temp;
 
