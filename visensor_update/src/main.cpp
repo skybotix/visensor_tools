@@ -89,15 +89,14 @@ SensorUpdater::VersionEntry parse_version(std::string version_string) {
 }
 
 void parse_versions(const std::vector<std::string> &args, SensorUpdater::VersionList& requestedVersions) {
-
   SensorUpdater::VersionEntry arg_fpga_version = parse_version(args[0]);
   arg_fpga_version.package_name = "visensor-fpga-bitstream";
   requestedVersions.push_back(arg_fpga_version);
   SensorUpdater::VersionEntry arg_kernel_version = parse_version(args[1]);
-  arg_kernel_version.package_name = "visensor-linux-embedded";
+  arg_kernel_version.package_name = "visensor-kernel-modules";
   requestedVersions.push_back(arg_kernel_version);
   SensorUpdater::VersionEntry arg_embedded_version = parse_version(args[2]);
-  arg_embedded_version.package_name = "visensor-kernel-modules";
+  arg_embedded_version.package_name = "visensor-linux-embedded";
   requestedVersions.push_back(arg_embedded_version);
 }
 

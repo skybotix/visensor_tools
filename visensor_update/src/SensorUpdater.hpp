@@ -212,8 +212,8 @@ static const std::map< SensorUpdater::REPOS, std::string> REPOS_PATH = {
 /* which packages do we want to install, if we do a sensor update */
 static const SensorUpdater::parse_function_map possible_pkgs_ {
   {"visensor-fpga-bitstream", &SensorUpdater::parseVersionFpgaBitstream},
-  {"visensor-linux-embedded", &SensorUpdater::parseVersionDefault},
-  {"visensor-kernel-modules", &SensorUpdater::parseVersionDefault}
+  {"visensor-kernel-modules", &SensorUpdater::parseVersionDefault},
+  {"visensor-linux-embedded", &SensorUpdater::parseVersionDefault}
 };
 
 static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> supported_imu_ {
