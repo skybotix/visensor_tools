@@ -140,7 +140,7 @@ class SensorUpdater {
   bool printVersionsInstalled(void);
   bool printVersionsRepo(REPOS repo);
 
-  bool getUpdateList(SensorUpdater::VersionList &outList, const REPOS &repo);
+  bool getUpdateList(SensorUpdater::VersionList &outList, const VersionList &packageVersionList, const REPOS &repo);
 
 
   /* package functions */
@@ -166,19 +166,11 @@ class SensorUpdater {
 
 
   /* high level update functions */
-  bool sensorUpdate(REPOS &repo);
-
+  bool sensorUpdate(REPOS &repo, const VersionList& requestedVersionList);
 
 
  private:
-
-//  parse_function_map create_possible_pkgs_map() {
-//    parse_function_map map;
-//    map.insert(parse_function_map::value_type("visensor-fpga-bitstream", &SensorUpdater::parseVersionFpgaBitstream));
-//    map.insert(parse_function_map::value_type("visensor-linux-embedded", &SensorUpdater::parseVersionDefault));
-//    map.insert(parse_function_map::value_type("visensor-kernel-modules", &SensorUpdater::parseVersionDefault));
-//    return map;
-//  };
+  bool checkRepo(REPOS &repo);
 
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor

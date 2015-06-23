@@ -391,10 +391,6 @@ bool SensorUpdater::sensorReboot(void) const
 
 
 /* install a debian package which is on the sensor */
-bool sensorInstallDebMemory(const std::string &debian_package);
-
-
-/* install a debian package which is on the sensor */
 bool SensorUpdater::sensorInstallDebFile(const std::string &remotefile)
 {
   std::string output;
@@ -503,7 +499,7 @@ bool SensorUpdater::sensorClean(void)
 }
 
 /* get a list of the newest versions from the repo */
-bool SensorUpdater::getUpdateList(VersionList &outList, const REPOS &repo)
+bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packageVersionList, const REPOS &repo)
 {
   /* get the newest version from the repos */
   VersionList allPackages;
@@ -511,14 +507,29 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const REPOS &repo)
 
   //extract the newst version of all mandatory packages
   VersionList updatePackages;
-
-  for (parse_function_map::const_iterator iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter) {
+  int i = 0;
+  for (parse_function_map::const_iterator iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter, ++i) {
     /* extract all packages which are mandatory to install */
     VersionList temp;
 
     for(size_t j=0; j<allPackages.size(); j++){
-      if( allPackages[j].package_name == iter->first)
-        temp.push_back( allPackages[j] );
+      if( allPackages[j].package_name == iter->first) {
+        if (!packageVersionList.empty()) {
+          // check if the version is the requested version
+          if (allPackages[j] == packageVersionList[i]) {
+            if (allPackages[j].package_name != packageVersionList[i].package_name) {
+              std::cerr << "requested version package name and found package name does not match" << std::endl;
+              exit(-1);
+            }
+
+            temp.push_back( allPackages[j] );
+            break;
+          }
+        }
+        else {
+          temp.push_back( allPackages[j] );
+        }
+      }
     }
 
     /* check we found the mandatory package */
@@ -791,20 +802,8 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
   return true;
 
 }
-/* remove all old packages and install the newest version of all packages in the repo which are mandatory */
-bool SensorUpdater::sensorUpdate(REPOS &repo)
-{
-  VersionList list;
-  VersionList currentList;
-  std::string localPath = std::string("/tmp/");
 
-  bool success = false;
-
-  if(!getVersionInstalled(currentList)) {
-    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
-    return false;
-  }
-
+bool SensorUpdater::checkRepo(REPOS &repo) {
   // check if fpga version is supported
   VersionEntry fpga_version;
   if ((this->*(possible_pkgs_.at("visensor-fpga-bitstream")))(fpga_version, "visensor-fpga-bitstream") ) {
@@ -841,24 +840,46 @@ bool SensorUpdater::sensorUpdate(REPOS &repo)
     default:
       break;
   }
-
-  if(getUpdateList(list, repo))
-  {
-    if(downloadPackagesToPath(list, localPath))
-    {
-      if(sensorClean())
-      {
-        if (checkCalibrationConvertion(currentList, list)) {
-          // update to newest version
-          if(installPackagesFromPath(list, localPath)) {
-            success = true;
-          }
-        }
-      }
-    }
-  }
-
-  return success;
+  return true;
 }
 
+/* remove all old packages and install the newest/given version of all packages in the repo which are mandatory */
+bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersionList) {
+  VersionList list;
+  VersionList currentList;
+  std::string localPath = std::string("/tmp/");
 
+  if(!getUpdateList(list, requestedVersionList, repo))
+  {
+    return false;
+  }
+
+  if(!checkRepo(repo)) {
+    return false;
+  }
+
+  if(!getVersionInstalled(currentList)) {
+    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
+    return false;
+  }
+
+  if(!downloadPackagesToPath(list, localPath))
+  {
+    return false;
+  }
+
+  if(!sensorClean())
+  {
+    return false;
+  }
+
+  if (!checkCalibrationConvertion(currentList, list)) {
+    return false;
+  }
+  // update to newest version
+  if(!installPackagesFromPath(list, localPath)) {
+    return false;
+  }
+
+  return true;
+}
