@@ -716,14 +716,10 @@ bool SensorUpdater::convertCalibration() {
   }
 
   // try to load existing configuration already saved in the new format
-  try {
-    config_server->loadConfig();
-  }
-  catch (visensor::exceptions const &ex) {
-    std::cout <<  "..." << std::endl
+    if (!config_server->loadConfig()) {
+    std::cout <<  "..."
         << "no new configurations were found, assume that the sensor has no" << std::endl;
-    std::cout <<  "Exception was: " << ex.what() << std::endl;
-    std::cout <<  "continue ... " << std::endl;
+    std::cout <<  "continue ... " ;
   }
 
   std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
