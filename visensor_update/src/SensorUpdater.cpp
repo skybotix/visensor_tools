@@ -30,10 +30,7 @@
  *
  */
 
-
 #include <iostream>
-
-#include "SensorUpdater.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -41,7 +38,9 @@
 #include <boost/tokenizer.hpp>
 #include <boost/regex.hpp>
 
+#include "config/visensor_configuration.hpp"
 
+#include "SensorUpdater.hpp"
 
 SensorUpdater::SensorUpdater(const std::string &hostname) //:
 //  possible_pkgs_(create_possible_pkgs_map())
@@ -724,9 +723,10 @@ bool SensorUpdater::convertCalibration() {
     config_server->loadConfig();
   }
   catch (visensor::exceptions const &ex) {
-    std::cout <<  "ignore" << std::endl
+    std::cout <<  "..." << std::endl
         << "no new configurations were found, assume that the sensor has no" << std::endl;
     std::cout <<  "Exception was: " << ex.what() << std::endl;
+    std::cout <<  "continue ... " << ex.what() << std::endl;
   }
 
   std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
@@ -737,7 +737,7 @@ bool SensorUpdater::convertCalibration() {
   }
   try {
     for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();  it != calibration_list.end(); ++it) {
-      config_server->cleanCameraCalibration(static_cast<SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
+      config_server->cleanCameraCalibration(static_cast<visensor::SensorId::SensorId>(it->cam_id_), it->slot_id_, it->is_flipped_,
                                           visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
                                           visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
 

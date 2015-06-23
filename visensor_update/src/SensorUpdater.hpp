@@ -43,8 +43,7 @@
 
 // include from libvisensor
 #include "communication_layers/SshConnections.hpp"
-//#include <visensor/visensor.hpp>
-#include <visensor_impl.hpp>
+#include "networking/file_transfer.hpp"
 
 class SensorUpdater {
  public:
