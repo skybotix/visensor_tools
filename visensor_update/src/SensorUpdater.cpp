@@ -850,15 +850,14 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
   VersionList currentList;
   std::string localPath = std::string("/tmp/");
 
-  if(!getUpdateList(list, requestedVersionList, repo))
-  {
-    return false;
-  }
-
   if(!checkRepo(repo)) {
     return false;
   }
 
+  if(!getUpdateList(list, requestedVersionList, repo))
+  {
+    return false;
+  }
   if(!getVersionInstalled(currentList)) {
     std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
     return false;

@@ -232,7 +232,7 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   // command arguments
-  typedef bool (*commandFunction)(SensorUpdater&, std::vector<std::string> &args); // function pointer type
+  typedef bool (*commandFunction)(SensorUpdater&, std::vector<std::string>&); // function pointer type
   std::map<std::string, commandFunction> argCmds =
   {
       {"update", cmdUpdate},
