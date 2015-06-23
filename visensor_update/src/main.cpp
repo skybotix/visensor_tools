@@ -52,6 +52,12 @@ void printArgs(void)
                  "                          updates the sensor to the given version from the online repo, check for the correct IMU first" << std::endl;
     std::cout << "     update <imu-type> <fpga-version> <kernel-version> <embedded-version>\n"
                  "                          updates the sensor to the given version from the online repo, select the IMU" << std::endl;
+    std::cout << "     download_to <path> <imu-type>\n"
+        "                                   download newest packages to a given path. The imu-type can be 16448 or 16488" << std::endl;
+    std::cout << "     download_to <path> <imu-type> <fpga-version> <kernel-version> <embedded-version>\n"
+        "                                   download given version to a given path. The imu-type can be 16448 or 16488" << std::endl;
+    std::cout << "     upload_from <path>\n"
+        "                                   upload previous downlaoded software to the path." << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
