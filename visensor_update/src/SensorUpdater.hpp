@@ -224,9 +224,9 @@ static const SensorUpdater::parse_function_map possible_pkgs_ {
   {"visensor-kernel-modules", &SensorUpdater::parseVersionDefault}
 };
 
-static const std::map<const int, const SensorUpdater::SUPPORTED_IMU> supported_imu_ {
-  { 16448,  SensorUpdater::SUPPORTED_IMU::ADIS_16448},
-  { 16488,  SensorUpdater::SUPPORTED_IMU::ADIS_16488} };
+static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> supported_imu_ {
+  { "A48",  SensorUpdater::SUPPORTED_IMU::ADIS_16448},
+  { "A88",  SensorUpdater::SUPPORTED_IMU::ADIS_16488} };
 
 static const std::map<std::string, SensorUpdater::SUPPORTED_FPGA_CONFIGS> supported_fpga_configs_ {
   { "a",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::NORMAL},

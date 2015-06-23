@@ -189,16 +189,17 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
    return false;
   }
 
-  boost::regex type_expression("[\\s\\t]*[A-Za-z:]*[\\s\\t]+[A-Za-z]*_([a-z]+)_[A-Za-z]*([0-9]+)");
   /* find matches for the sensor type. Try first the new format config_<SensorType>_<ImuType> */
+  boost::regex type_expression("[\\s\\t]*[A-Za-z:]*[\\s\\t]+[A-Za-z]*_([a-z]+)_"
+      "([A-Za-z0-9]+)");
   boost::cmatch what_type;
   if( regex_match(note_line.c_str(), what_type, type_expression) )  {
    // what_type[0] contains whole filename
    // what_type[1] contains the sensor type: a => normal configuration, c => flir configuration
-   // what_type[2] contains the IMU type: 16448 or 16488
+   // what_type[2] contains the IMU type: A48 or A88
     try {
       package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
-      package.imu_type = supported_imu_.at(boost::lexical_cast<unsigned int>( what_type[2] ));
+      package.imu_type = supported_imu_.at(boost::lexical_cast<std::string>( what_type[2] ));
     }
     catch (const std::exception& ex) {
       std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
