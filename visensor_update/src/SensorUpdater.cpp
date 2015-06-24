@@ -43,14 +43,19 @@
 
 #include "SensorUpdater.hpp"
 
-SensorUpdater::SensorUpdater(const std::string &hostname) {
-  pSsh_ =  boost::make_shared<visensor::SshConnection>(hostname, sshUsername(), sshPassword());
-  pFile_transfer_ =  boost::make_shared<visensor::FileTransfer>(pSsh_);
+SensorUpdater::SensorUpdater() {
+  is_ssh_initialized_ = false;
 }
 
 
 SensorUpdater::~SensorUpdater()
 {
+}
+
+void SensorUpdater::connect(const std::string &target_ip) {
+  pSsh_ =  boost::make_shared<visensor::SshConnection>(target_ip, sshUsername(), sshPassword());
+  pFile_transfer_ =  boost::make_shared<visensor::FileTransfer>(pSsh_);
+  is_ssh_initialized_ = true;
 }
 
 //function returns a vector of pairs with (package_name, version)
@@ -77,6 +82,11 @@ bool SensorUpdater::parseVersionDefault(VersionEntry& package, const std::string
   // run command
   int exitcode=127;
   std::string output;
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
+
   pSsh_->runCommand( std::string("dpkg -l | grep ") + prefix,
                      output,
                      exitcode );
@@ -139,6 +149,11 @@ bool SensorUpdater::parseVersionDefault(VersionEntry& package, const std::string
 bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::string &prefix) {
   std::string output;
   int exitcode=127;
+
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
 
   // run command
   pSsh_->runCommand( std::string("/home/root/fpga/fpga_version.bash"),
@@ -248,7 +263,7 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo)
   std::string repo_ftppath = REPOS_PATH.at(repo);
 
   // open ftp connection
-  WebClient web_client(hostname());
+  WebClient web_client(servername());
 
   bool success = web_client.dirList(repo_ftppath, filelist);
 
@@ -408,6 +423,11 @@ bool SensorUpdater::sensorReboot(void) const
   std::string output;
   int exitcode=127;
 
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
+
   // run command
   pSsh_->runCommand( std::string("reboot"),
                      output,
@@ -425,6 +445,11 @@ bool SensorUpdater::sensorInstallDebFile(const std::string &remotefile)
 {
   std::string output;
   int exitcode=127;
+
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
 
   // mount read-write for changes
   bool success = sensorSetMountRW(true);
@@ -451,6 +476,11 @@ bool SensorUpdater::sensorRemoveDeb(const std::string &package_name)
   std::string output;
   int exitcode=127;
 
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
+
   // mount read-write for changes
   bool success = sensorSetMountRW(true);
 
@@ -475,6 +505,11 @@ bool SensorUpdater::sensorSetMountRW(bool RW)
 
   std::string output;
   int exitcode=127;
+
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
 
   //command
   std::string cmd;
@@ -585,7 +620,7 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packa
 bool SensorUpdater::downloadPackagesToPath(VersionList &packageList, const std::string &localPath)
 {
   // download and install the needed packages
-   WebClient web_client(hostname());
+   WebClient web_client(servername());
 
    for(size_t i=0; i<packageList.size(); i++)
    {
@@ -611,6 +646,11 @@ bool SensorUpdater::downloadPackagesToPath(VersionList &packageList, const std::
 /* install packages defined in packageList from local path to sensor*/
 bool SensorUpdater::installPackagesFromPath(VersionList &packageList, const std::string &localPath)
 {
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
+
   for(size_t i=0; i<packageList.size(); i++)
   {
     std::cout << "Installing " << packageList[i].package_name << " ...  ";
@@ -661,6 +701,12 @@ bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::pr
 }
 bool SensorUpdater::loadXmlCameraCalibrationFile(std::string local_calibration_filename) {
     std::string remote_calibration_filename = std::string("/calibration.xml");
+
+    if (!is_ssh_initialized_) {
+      std::cout << "sensor updater is not connected to any sensor\n";
+      return false;
+    }
+
     // transfer calibration file from the sensor
     if(!pSsh_->getFile(remote_calibration_filename, local_calibration_filename))
     {
@@ -845,7 +891,8 @@ bool SensorUpdater::checkRepo(REPOS &repo) {
     }
   }
   else {
-    std::cout << "failed to get fpga config" << std::endl;
+    std::cout << "failed to get fpga config!\n" << std::endl;
+    return false;
   }
 
   switch (repo) {
@@ -921,15 +968,6 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
 bool SensorUpdater::sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList) {
   VersionList list;
   VersionList currentList;
-
-  if(!getVersionInstalled(currentList)) {
-    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
-    return false;
-  }
-
-  if(!checkRepo(repo)) {
-    return false;
-  }
 
   if(!getUpdateList(list, requestedVersionList, repo))
   {

@@ -129,8 +129,10 @@ class SensorUpdater {
   typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry& package, const std::string &prefix); // function pointer type
   typedef std::map<std::string, parseFunction> parse_function_map;
 
-  SensorUpdater(const std::string &hostname);
+  SensorUpdater();
   virtual ~SensorUpdater();
+
+  void connect(const std::string &target_ip);
 
   /* repo functions */
   bool getVersionInstalled(VersionList &outPackageList);
@@ -177,6 +179,7 @@ class SensorUpdater {
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
+  bool is_ssh_initialized_; ///< check if updater is connected to the sensor
 
 
 
@@ -187,7 +190,7 @@ class SensorUpdater {
   const std::string sshUsername() const {
       return "root";
   }
-  const std::string hostname() const {
+  const std::string servername() const {
       return "http://skybotix.com/downloads/vi-firmware";
   }
 

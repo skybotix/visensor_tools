@@ -47,17 +47,17 @@ void printArgs(void)
     std::cout << "  Available commands are:" << std::endl;
     std::cout << "     update               updates the sensor to the newest software on the online repo, check for the correct IMU first" << std::endl;
     std::cout << "     update <imu-type>    updates the sensor with the specified IMU version to the newest software on the online repo.\n"
-        "                                   The imu-type can be 16448 or 16488" << std::endl;
+                 "                          The imu-type can be 16448 or 16488" << std::endl;
     std::cout << "     update <fpga-version> <kernel-version> <embedded-version>\n"
                  "                          updates the sensor to the given version from the online repo, check for the correct IMU first" << std::endl;
     std::cout << "     update <imu-type> <fpga-version> <kernel-version> <embedded-version>\n"
                  "                          updates the sensor to the given version from the online repo, select the IMU" << std::endl;
     std::cout << "     download_to <path> <imu-type>\n"
-        "                                   download newest packages to a given path. The imu-type can be 16448 or 16488" << std::endl;
+                 "                          download newest packages to a given path. The imu-type can be 16448 or 16488" << std::endl;
     std::cout << "     download_to <path> <imu-type> <fpga-version> <kernel-version> <embedded-version>\n"
-        "                                   download given version to a given path. The imu-type can be 16448 or 16488" << std::endl;
-    std::cout << "     upload_from <path>\n"
-        "                                   upload previous downlaoded software to the path." << std::endl;
+                 "                          download given version to a given path. The imu-type can be 16448 or 16488" << std::endl;
+    std::cout << "     update_from <path>\n"
+                 "                          upload previous downlaoded software to the path." << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
@@ -127,7 +127,7 @@ bool update(SensorUpdater &updater, SensorUpdater::REPOS repo, SensorUpdater::Ve
 }
 
 
-bool cmdUploadFrom(SensorUpdater &updater, std::vector<std::string> &args)
+bool cmdUpdateFrom(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args)
 {
   std::string path;
   SensorUpdater::VersionList packageList;
@@ -136,8 +136,11 @@ bool cmdUploadFrom(SensorUpdater &updater, std::vector<std::string> &args)
     printArgs();
     return false;
   }
-
   path = args[0];
+
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
+
   /* print version before update */
   std::cout << "Before update:\n";
   updater.printVersionsInstalled();
@@ -157,13 +160,16 @@ bool cmdUploadFrom(SensorUpdater &updater, std::vector<std::string> &args)
   return success;
 }
 
-bool cmdUpdate(SensorUpdater &updater, std::vector<std::string> &args) {
+bool cmdUpdate(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args) {
   SensorUpdater::VersionList requestedVersions;
   std::map<std::string, SensorUpdater::REPOS> arg_repos =
   {
     {"16448", SensorUpdater::REPOS::REPO_16448_RELEASE},
     {"16488", SensorUpdater::REPOS::REPO_16488_RELEASE}
   };
+
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
 
   // check if command: update <imu-type>
   if(args.size() == 1)  {
@@ -200,7 +206,7 @@ bool cmdUpdate(SensorUpdater &updater, std::vector<std::string> &args) {
   return update(updater, SensorUpdater::REPOS::REPO_RELEASE, requestedVersions);
 }
 
-bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
+bool cmdUpdateDevelop(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args)
 {
   SensorUpdater::VersionList requestedVersions;
   std::map<std::string, SensorUpdater::REPOS> arg_repos =
@@ -208,6 +214,9 @@ bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
     {"16448", SensorUpdater::REPOS::REPO_16448_DEV},
     {"16488", SensorUpdater::REPOS::REPO_16488_DEV}
   };
+
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
 
   if(args.size() == 1)  {
   // check if command: update-devel <imu-type>
@@ -243,7 +252,7 @@ bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
   return update(updater, SensorUpdater::REPOS::REPO_DEV, requestedVersions);
 }
 
-bool cmdDownloadTo(SensorUpdater &updater, std::vector<std::string> &args) {
+bool cmdDownloadTo(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args) {
   SensorUpdater::VersionList requestedVersions;
   SensorUpdater::REPOS repository;
   std::string path;
@@ -289,7 +298,7 @@ bool cmdDownloadTo(SensorUpdater &updater, std::vector<std::string> &args) {
   return updater.sensorDownloadTo(repository, path, requestedVersions);
 }
 
-bool cmdDownloadDevelTo(SensorUpdater &updater, std::vector<std::string> &args) {
+bool cmdDownloadDevelTo(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args) {
   SensorUpdater::VersionList requestedVersions;
   SensorUpdater::REPOS repository;
   std::string path;
@@ -335,23 +344,35 @@ bool cmdDownloadDevelTo(SensorUpdater &updater, std::vector<std::string> &args) 
   return updater.sensorDownloadTo(repository, path, requestedVersions);
 }
 
-bool cmdConvertCalibration(SensorUpdater &updater, std::vector<std::string> &args)
+bool cmdConvertCalibration(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args)
 {
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
+
   return updater.convertCalibration();
 }
 
-bool cmdClean(SensorUpdater &updater, std::vector<std::string> &args)
+bool cmdClean(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args)
 {
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
+
   return updater.sensorClean();
 }
 
-bool cmdVersion(SensorUpdater &updater, std::vector<std::string> &args)
+bool cmdVersion(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args)
 {
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
+
   return updater.printVersionsInstalled();
 }
 
-bool cmdReboot(SensorUpdater &updater, std::vector<std::string> &args)
+bool cmdReboot(SensorUpdater& updater, std::string& target_name, std::vector<std::string>& args)
 {
+  // try to connect to the specified hostname/IP
+  updater.connect(target_name);
+
   return updater.sensorReboot();
 }
 
@@ -362,14 +383,14 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   // command arguments
-  typedef bool (*commandFunction)(SensorUpdater&, std::vector<std::string>&); // function pointer type
+  typedef bool (*commandFunction)(SensorUpdater&, std::string&, std::vector<std::string>&); // function pointer type
   std::map<std::string, commandFunction> argCmds =
   {
       {"update", cmdUpdate},
       {"update-devel", cmdUpdateDevelop},
       {"download_to", cmdDownloadTo},
       {"download-devel_to", cmdDownloadDevelTo},
-      {"upload_from", cmdUploadFrom},
+      {"update_from", cmdUpdateFrom},
       {"convert-calibration", cmdConvertCalibration},
       {"clean", cmdClean},
       {"reboot", cmdReboot},
@@ -384,14 +405,14 @@ int main(int argc, char** argv)
   /* find all sensors using auto discovery */
 
   //make IP optional
-  std::string hostname,
+  std::string targetname,
               command;
 
   if(args.size() >= 2)
   {
     //args <COMMAND> <IP>
     command = args[0];
-    hostname = args[1];
+    targetname = args[1];
     args.erase(args.begin(),args.begin()+2);
   }
   else
@@ -410,11 +431,11 @@ int main(int argc, char** argv)
     exit(-1);
   }
 
-  // try to connect to the specified hostname/IP
-  SensorUpdater updater(hostname);
+  // initialize updater without connecting to device
+  SensorUpdater updater;
 
   // run the command
-  success = argCmds[command](updater, args);
+  success = argCmds[command](updater, targetname, args);
 
   return success;
 }
