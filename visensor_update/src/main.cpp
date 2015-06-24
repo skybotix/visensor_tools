@@ -177,8 +177,8 @@ bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
     {"16488", SensorUpdater::REPOS::REPO_16488_DEV}
   };
 
-  // check if command: update <imu-type>
   if(args.size() == 1)  {
+  // check if command: update-devel <imu-type>
     std::string arg_repo = args[0];
     if( !arg_repos.count( arg_repo ) )
     {
@@ -188,12 +188,12 @@ bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
     }
     return update(updater, arg_repos.at(arg_repo), requestedVersions);
   }
-  // check if command: update <fpga-version> <kernel-version> <embedded-version>
+  // check if command: update-devel <fpga-version> <kernel-version> <embedded-version>
   else if(args.size() == 3)  {
     parse_versions(args, requestedVersions);
     return update(updater, SensorUpdater::REPOS::REPO_DEV, requestedVersions);
   }
-  // check if command: update <imu-type> <fpga-version> <kernel-version> <embedded-version>
+  // check if command: update-devel <imu-type> <fpga-version> <kernel-version> <embedded-version>
   else if(args.size() == 4)  {
     std::string arg_repo = args[0];
     args.erase(args.begin());
@@ -209,6 +209,98 @@ bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
   }
   // use the default
   return update(updater, SensorUpdater::REPOS::REPO_DEV, requestedVersions);
+}
+
+bool cmdDownloadTo(SensorUpdater &updater, std::vector<std::string> &args) {
+  SensorUpdater::VersionList requestedVersions;
+  SensorUpdater::REPOS repository;
+  std::string path;
+  std::map<std::string, SensorUpdater::REPOS> arg_repos =
+  {
+    {"16448", SensorUpdater::REPOS::REPO_16448_RELEASE},
+    {"16488", SensorUpdater::REPOS::REPO_16488_RELEASE}
+  };
+
+  // check if command: download-devel_to <path> <imu-type>
+  if(args.size() == 2)  {
+    SensorUpdater::VersionList requestedVersions;
+    path = args[0];
+    std::string arg_repo = args[1];
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    repository = arg_repos.at(arg_repo);
+  }
+  // check if command: download_to <path> <imu-type> <fpga-version> <kernel-version> <embedded-version>
+  else if(args.size() == 5)  {
+    path = args[0];
+    std::string arg_repo = args[1];
+    args.erase(args.begin(),args.begin() + 2);
+    parse_versions(args, requestedVersions);
+
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    repository = SensorUpdater::REPOS::REPO_RELEASE;
+  }
+  else {
+    // print help
+    printArgs();
+    exit(-1);
+  }
+  return updater.sensorDownloadTo(repository, path, requestedVersions);
+}
+
+bool cmdDownloadDevelTo(SensorUpdater &updater, std::vector<std::string> &args) {
+  SensorUpdater::VersionList requestedVersions;
+  SensorUpdater::REPOS repository;
+  std::string path;
+  std::map<std::string, SensorUpdater::REPOS> arg_repos =
+  {
+    {"16448", SensorUpdater::REPOS::REPO_16448_DEV},
+    {"16488", SensorUpdater::REPOS::REPO_16488_DEV}
+  };
+
+  // check if command: download_to <path> <imu-type>
+  if(args.size() == 2)  {
+    SensorUpdater::VersionList requestedVersions;
+    path = args[0];
+    std::string arg_repo = args[1];
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    repository = arg_repos.at(arg_repo);
+  }
+  // check if command: download-devel_to <path> <imu-type> <fpga-version> <kernel-version> <embedded-version>
+  else if(args.size() == 5)  {
+    path = args[0];
+    std::string arg_repo = args[1];
+    args.erase(args.begin(),args.begin() + 2);
+    parse_versions(args, requestedVersions);
+
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    repository = SensorUpdater::REPOS::REPO_DEV;
+  }
+  else {
+    // print help
+    printArgs();
+    exit(-1);
+  }
+  return updater.sensorDownloadTo(repository, path, requestedVersions);
 }
 
 bool cmdConvertCalibration(SensorUpdater &updater, std::vector<std::string> &args)
@@ -243,6 +335,8 @@ int main(int argc, char** argv)
   {
       {"update", cmdUpdate},
       {"update-devel", cmdUpdateDevelop},
+      {"download_to", cmdDownloadTo},
+      {"download-devel_to", cmdDownloadDevelTo},
       {"convert-calibration", cmdConvertCalibration},
       {"clean", cmdClean},
       {"reboot", cmdReboot},

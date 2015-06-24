@@ -164,10 +164,10 @@ class SensorUpdater {
 
   bool sensorSetMountRW(bool RW);
 
-
   /* high level update functions */
   bool sensorUpdate(REPOS &repo, const VersionList& requestedVersionList);
 
+  bool sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList);
 
  private:
   bool checkRepo(REPOS &repo);

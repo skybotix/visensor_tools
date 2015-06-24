@@ -850,6 +850,11 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
   VersionList currentList;
   std::string localPath = std::string("/tmp/");
 
+  if(!getVersionInstalled(currentList)) {
+    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
+    return false;
+  }
+
   if(!checkRepo(repo)) {
     return false;
   }
@@ -858,11 +863,6 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
   {
     return false;
   }
-  if(!getVersionInstalled(currentList)) {
-    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
-    return false;
-  }
-
   if(!downloadPackagesToPath(list, localPath))
   {
     return false;
@@ -883,3 +883,32 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
 
   return true;
 }
+
+
+/* remove all old packages and install the newest/given version of all packages in the repo which are mandatory */
+bool SensorUpdater::sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList) {
+  VersionList list;
+  VersionList currentList;
+
+  if(!getVersionInstalled(currentList)) {
+    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
+    return false;
+  }
+
+  if(!checkRepo(repo)) {
+    return false;
+  }
+
+  if(!getUpdateList(list, requestedVersionList, repo))
+  {
+    return false;
+  }
+
+  if(!downloadPackagesToPath(list, path))
+  {
+    return false;
+  }
+
+  return true;
+}
+
