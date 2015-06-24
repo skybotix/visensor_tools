@@ -41,7 +41,7 @@
 #include "SensorUpdater.hpp"
 void printArgs(void)
 {
-    std::cout << "visensor_update <COMMAND>  <SENSOR_IP> <CMD_ARGS>" << std::endl;
+    std::cout << "visensor_update <SENSOR_IP> <COMMAND> <CMD_ARGS>" << std::endl;
     std::cout << std::endl;
 
     std::cout << "  Available commands are:" << std::endl;
@@ -60,7 +60,7 @@ void printArgs(void)
     std::cout << std::endl;
 
     std::cout << "  Perform sensor update:" << std::endl;
-    std::cout << "     visensor_update update 10.0.0.1" << std::endl;
+    std::cout << "     visensor_update 10.0.0.1 update" << std::endl;
     std::cout << std::endl;
 }
 
@@ -256,9 +256,9 @@ int main(int argc, char** argv)
 
   if(args.size() >= 2)
   {
-    //args <COMMAND> <IP>
-    command = args[0];
-    hostname = args[1];
+    //args <IP> <COMMAND>
+    hostname = args[0];
+    command = args[1];
     args.erase(args.begin(),args.begin()+2);
   }
   else
