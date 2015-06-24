@@ -137,6 +137,7 @@ class SensorUpdater {
   bool parseVersionDefault(VersionEntry& package, const std::string &prefix);
   bool parseVersionFpgaBitstream(VersionEntry& package, const std::string &prefix);
   bool getVersionsOnServer(SensorUpdater::VersionList &outPackageList, REPOS repo);
+  bool getVersionsFromLocalPath(VersionList &outPackageList, std::string path);
   bool printVersionsInstalled(void);
   bool printVersionsRepo(REPOS repo);
 
@@ -168,6 +169,7 @@ class SensorUpdater {
   bool sensorUpdate(REPOS &repo, const VersionList& requestedVersionList);
 
   bool sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList);
+  bool sensorUploadFrom(const std::string path);
 
  private:
   bool checkRepo(REPOS &repo);
@@ -199,6 +201,9 @@ class SensorUpdater {
       return "visensor";
   }
 
+  const std::string remotePath() const {
+    return "/tmp/";
+  }
 };
 
 static const std::map< SensorUpdater::REPOS, std::string> REPOS_PATH = {

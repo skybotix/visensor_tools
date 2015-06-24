@@ -31,6 +31,7 @@
  */
 
 #include <iostream>
+#include <dirent.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -307,6 +308,35 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo)
   //now remove old version (only the newest version of each package should remain in the list
   return true;
 }
+bool SensorUpdater::getVersionsFromLocalPath(VersionList &outPackageList, std::string path) {
+  // clear the output list
+  outPackageList.clear();
+
+  std::string filelist;
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir (path.c_str())) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir (dir)) != NULL) {
+      for (parse_function_map::const_iterator  iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter) {
+        if(ent->d_name == (iter->first + ".deb")){
+          VersionEntry package;
+          package.package_name = iter->first;
+          package.path =  path + "/" + ent->d_name;
+          outPackageList.push_back(package);
+        }
+      }
+    }
+    closedir (dir);
+  } else {
+    /* could not open directory */
+    perror ("");
+    return false;
+  }
+
+  return true;
+}
 
 bool SensorUpdater::printVersionsInstalled(void)
 {
@@ -498,7 +528,7 @@ bool SensorUpdater::sensorClean(void)
   return success;
 }
 
-/* get a list of the newest versions from the repo */
+/* get a list of the newest/defined versions from the repo */
 bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packageVersionList, const REPOS &repo)
 {
   // get the newest version from the repos
@@ -587,9 +617,10 @@ bool SensorUpdater::installPackagesFromPath(VersionList &packageList, const std:
 
     // download
     std::string pkg_filename = localPath + packageList[i].package_name + std::string(".deb");
+    std::string pkg_remote_filename = remotePath() + packageList[i].package_name + std::string(".deb");
 
     // transfer file to sensor
-    bool ret = pSsh_->sendFile(pkg_filename, pkg_filename);
+    bool ret = pSsh_->sendFile(pkg_filename, pkg_remote_filename);
     if(!ret)
     {
       std::cout << "failed.\n";
@@ -598,7 +629,7 @@ bool SensorUpdater::installPackagesFromPath(VersionList &packageList, const std:
     }
 
     // install
-    ret = sensorInstallDebFile(pkg_filename);
+    ret = sensorInstallDebFile(pkg_remote_filename);
 
     if(!ret)
     {
@@ -863,6 +894,7 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
   {
     return false;
   }
+
   if(!downloadPackagesToPath(list, localPath))
   {
     return false;
@@ -876,6 +908,7 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
   if (!checkCalibrationConvertion(currentList, list)) {
     return false;
   }
+
   // update to newest version
   if(!installPackagesFromPath(list, localPath)) {
     return false;
@@ -885,7 +918,6 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
 }
 
 
-/* remove all old packages and install the newest/given version of all packages in the repo which are mandatory */
 bool SensorUpdater::sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList) {
   VersionList list;
   VersionList currentList;
@@ -912,3 +944,34 @@ bool SensorUpdater::sensorDownloadTo(REPOS &repo, const std::string path, const 
   return true;
 }
 
+
+
+bool SensorUpdater::sensorUploadFrom(const std::string path) {
+  VersionList list;
+  VersionList currentList;
+
+  if(!getVersionInstalled(currentList)) {
+    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
+    return false;
+  }
+
+  if(!getVersionsFromLocalPath(list, path))
+  {
+    return false;
+  }
+
+  if(!sensorClean())
+  {
+    return false;
+  }
+
+  if (!checkCalibrationConvertion(currentList, list)) {
+    return false;
+  }
+  // update to newest version
+  if(!installPackagesFromPath(list, path)) {
+    return false;
+  }
+
+  return true;
+}

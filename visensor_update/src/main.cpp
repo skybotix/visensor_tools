@@ -120,7 +120,39 @@ bool update(SensorUpdater &updater, SensorUpdater::REPOS repo, SensorUpdater::Ve
   updater.printVersionsInstalled();
 
   /* reboot the sensor */
-  updater.sensorReboot();
+  if (success)
+    updater.sensorReboot();
+
+  return success;
+}
+
+
+bool cmdUploadFrom(SensorUpdater &updater, std::vector<std::string> &args)
+{
+  std::string path;
+  SensorUpdater::VersionList packageList;
+  // check if command: upload_from <path>
+  if(args.size() != 1)  {
+    printArgs();
+    return false;
+  }
+
+  path = args[0];
+  /* print version before update */
+  std::cout << "Before update:\n";
+  updater.printVersionsInstalled();
+
+  /* install the downloaded version */
+  std::cout << "Installing packages from: " << path << std::endl << std::endl;
+  bool success = updater.sensorUploadFrom(path);
+
+  /* print version before update */
+  std::cout << "After update:\n";
+  updater.printVersionsInstalled();
+
+  /* reboot the sensor */
+  if (success)
+    updater.sensorReboot();
 
   return success;
 }
@@ -230,7 +262,7 @@ bool cmdDownloadTo(SensorUpdater &updater, std::vector<std::string> &args) {
     {
       //invalid command
       printArgs();
-      exit(-1);
+      return false;
     }
     repository = arg_repos.at(arg_repo);
   }
@@ -245,14 +277,14 @@ bool cmdDownloadTo(SensorUpdater &updater, std::vector<std::string> &args) {
     {
       //invalid command
       printArgs();
-      exit(-1);
+      return false;
     }
     repository = SensorUpdater::REPOS::REPO_RELEASE;
   }
   else {
     // print help
     printArgs();
-    exit(-1);
+    return false;
   }
   return updater.sensorDownloadTo(repository, path, requestedVersions);
 }
@@ -276,7 +308,7 @@ bool cmdDownloadDevelTo(SensorUpdater &updater, std::vector<std::string> &args) 
     {
       //invalid command
       printArgs();
-      exit(-1);
+      return false;
     }
     repository = arg_repos.at(arg_repo);
   }
@@ -291,14 +323,14 @@ bool cmdDownloadDevelTo(SensorUpdater &updater, std::vector<std::string> &args) 
     {
       //invalid command
       printArgs();
-      exit(-1);
+      return false;
     }
     repository = SensorUpdater::REPOS::REPO_DEV;
   }
   else {
     // print help
     printArgs();
-    exit(-1);
+    return false;
   }
   return updater.sensorDownloadTo(repository, path, requestedVersions);
 }
@@ -337,6 +369,7 @@ int main(int argc, char** argv)
       {"update-devel", cmdUpdateDevelop},
       {"download_to", cmdDownloadTo},
       {"download-devel_to", cmdDownloadDevelTo},
+      {"upload_from", cmdUploadFrom},
       {"convert-calibration", cmdConvertCalibration},
       {"clean", cmdClean},
       {"reboot", cmdReboot},
