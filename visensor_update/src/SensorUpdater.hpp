@@ -145,9 +145,6 @@ class SensorUpdater {
 
   bool getUpdateList(SensorUpdater::VersionList &outList, const VersionList &packageVersionList, const REPOS &repo);
 
-  bool setViSensorId(const int vi_sensor_id);
-  int  getViSensorId();
-
   /* package functions */
   bool downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
   bool installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
