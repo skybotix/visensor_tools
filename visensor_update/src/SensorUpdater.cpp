@@ -43,8 +43,8 @@
 
 #include "SensorUpdater.hpp"
 
-SensorUpdater::SensorUpdater() {
-  is_ssh_initialized_ = false;
+SensorUpdater::SensorUpdater() :
+  is_ssh_initialized_(false) {
 }
 
 
@@ -700,7 +700,7 @@ bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::pr
   return true;
 }
 bool SensorUpdater::loadXmlCameraCalibrationFile(std::string local_calibration_filename) {
-    std::string remote_calibration_filename = std::string("/calibration.xml");
+    std::string remote_calibration_filename("/calibration.xml");
 
     if (!is_ssh_initialized_) {
       std::cout << "sensor updater is not connected to any sensor\n";
@@ -794,7 +794,13 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
 }
 
 bool SensorUpdater::convertCalibration() {
+  if (!is_ssh_initialized_){
+    std::cout << "ssh is not initialize" << std::endl;
+    return false;
+  }
+  int sensorID;
   visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<visensor::ViSensorConfiguration>(pFile_transfer_);
+
   std::cout << "Convert calibration to new format ... ";
 
   std::string tmp_calibration_filename("/tmp/calibration.xml");
@@ -836,6 +842,23 @@ bool SensorUpdater::convertCalibration() {
     exit(1);
   }
   std::cout << "done." << std::endl;
+
+
+  std::cout << "The new configuration requested the Vi-Sensor ID." << std::endl;
+  while ((std::cout << "Sensor ID (integer): ") && !(std::cin >> sensorID)) {
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),' ');
+    std::cout << "Invalid input; please re-enter.\n";
+  }
+  try {
+    config_server->setViSensorId(sensorID);
+    config_server->saveConfig();
+  }
+  catch (visensor::exceptions const &ex) {
+    std::cout << "Setting of sensor ID failed!" << std::endl;
+    std::cout <<  "Exception was: " << ex.what() << std::endl;
+    return false;
+  }
   std::cout << std::endl;
   return true;
 }
@@ -847,8 +870,7 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
   //check if the calibration need to be converted
   if (old_list.size() == 0) {
     std::cout << "Try to copy possible available calibration ... ";
-
-    if (("/tmp/calibration.xml")) {
+    if (loadXmlCameraCalibrationFile("/tmp/calibration.xml")) {
       std::cout << "done." << std::endl;
       if (!convertCalibration()) {
         std::cerr << "Could not convert calibration to new format" << std::endl;
@@ -937,22 +959,19 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
     return false;
   }
 
-  if(!getUpdateList(list, requestedVersionList, repo))
-  {
+  if(!getUpdateList(list, requestedVersionList, repo)) {
     return false;
   }
 
-  if(!downloadPackagesToPath(list, localPath))
-  {
-    return false;
-  }
-
-  if(!sensorClean())
-  {
+  if(!downloadPackagesToPath(list, localPath)) {
     return false;
   }
 
   if (!checkCalibrationConvertion(currentList, list)) {
+    return false;
+  }
+
+  if(!sensorClean()) {
     return false;
   }
 
@@ -969,13 +988,11 @@ bool SensorUpdater::sensorDownloadTo(REPOS &repo, const std::string path, const 
   VersionList list;
   VersionList currentList;
 
-  if(!getUpdateList(list, requestedVersionList, repo))
-  {
+  if(!getUpdateList(list, requestedVersionList, repo)) {
     return false;
   }
 
-  if(!downloadPackagesToPath(list, path))
-  {
+  if(!downloadPackagesToPath(list, path)) {
     return false;
   }
 
@@ -993,17 +1010,15 @@ bool SensorUpdater::sensorUploadFrom(const std::string path) {
     return false;
   }
 
-  if(!getVersionsFromLocalPath(list, path))
-  {
-    return false;
-  }
-
-  if(!sensorClean())
-  {
+  if(!getVersionsFromLocalPath(list, path)) {
     return false;
   }
 
   if (!checkCalibrationConvertion(currentList, list)) {
+    return false;
+  }
+
+  if(!sensorClean()) {
     return false;
   }
   // update to newest version
