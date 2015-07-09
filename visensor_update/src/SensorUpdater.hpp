@@ -153,6 +153,7 @@ class SensorUpdater {
 
   /* calibration functions */
   bool convertCalibration();
+  bool checkConfiguration(visensor::ViSensorConfiguration::Ptr& config_server);
   std::vector<visensor::ViCameraCalibration>  parseXmlCameraCalibration(std::string xml_filename);
   bool checkCalibrationConvertion(VersionList old_list, VersionList new_list);
   bool loadXmlCameraCalibrationFile(std::string local_calibration_filename);

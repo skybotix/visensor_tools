@@ -39,7 +39,6 @@
 #include <boost/tokenizer.hpp>
 #include <boost/regex.hpp>
 
-#include "config/visensor_configuration.hpp"
 
 #include "SensorUpdater.hpp"
 
@@ -219,6 +218,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
     }
     catch (const std::exception& ex) {
       std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
+      return false;
     }
   }
   else {
@@ -242,6 +242,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
         }
         catch (const std::exception& ex) {
           std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
+          return false;
         }
       }
       else {
@@ -710,8 +711,6 @@ bool SensorUpdater::loadXmlCameraCalibrationFile(std::string local_calibration_f
     // transfer calibration file from the sensor
     if(!pSsh_->getFile(remote_calibration_filename, local_calibration_filename))
     {
-      std::cout << "failed.\n";
-      std::cout << "[ERROR]: Could not download calibration file from the sensor!\n";
       return false;
     }
     return true;
@@ -798,23 +797,29 @@ bool SensorUpdater::convertCalibration() {
     std::cout << "ssh is not initialize" << std::endl;
     return false;
   }
-  int sensorID;
   visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<visensor::ViSensorConfiguration>(pFile_transfer_);
 
   std::cout << "Convert calibration to new format ... ";
+
+
+
+  // try to load existing configuration already saved in the new format
+  if (!config_server->loadConfig()) {
+    std::cout <<  "...\n"
+        << "no new configurations were found, assume that the sensor has no" << std::endl;
+    std::cout <<  "set new default parameters ... " ;
+  }
 
   std::string tmp_calibration_filename("/tmp/calibration.xml");
   if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
     std::cout <<  "no calibration file was found, assume that the sensor is not yet calibrate" << std::endl;
     std::cout << std::endl;
-    return true;
+    return checkConfiguration(config_server);
   }
 
-  // try to load existing configuration already saved in the new format
-    if (!config_server->loadConfig()) {
-    std::cout <<  "..."
-        << "no new configurations were found, assume that the sensor has no" << std::endl;
-    std::cout <<  "continue ... " ;
+
+  if (!checkConfiguration(config_server)){
+    return false;
   }
 
   std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
@@ -843,23 +848,29 @@ bool SensorUpdater::convertCalibration() {
   }
   std::cout << "done." << std::endl;
 
+  return true;
+}
 
-  std::cout << "The new configuration requested the Vi-Sensor ID." << std::endl;
-  while ((std::cout << "Sensor ID (integer): ") && !(std::cin >> sensorID)) {
-    std::cin.clear();
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),' ');
-    std::cout << "Invalid input; please re-enter.\n";
+bool SensorUpdater::checkConfiguration(visensor::ViSensorConfiguration::Ptr& config_server) {
+  if ( (!config_server->isValid()) || (config_server->getViSensorId() < 0) ) {
+    int sensorID;
+    std::cout << std::endl << "The new configuration requested the Vi-Sensor ID." << std::endl;
+    while ((std::cout << "Sensor ID (integer): ") && !(std::cin >> sensorID)) {
+      std::cin.clear();
+      std::cin.ignore(std::numeric_limits<std::streamsize>::max(),' ');
+      std::cout << "Invalid input; please re-enter.\n";
+    }
+    try {
+      config_server->setViSensorId(sensorID);
+      config_server->saveConfig();
+    }
+    catch (visensor::exceptions const &ex) {
+      std::cout << "Setting of sensor ID failed!" << std::endl;
+      std::cout <<  "Exception was: " << ex.what() << std::endl;
+      return false;
+    }
+    std::cout << std::endl;
   }
-  try {
-    config_server->setViSensorId(sensorID);
-    config_server->saveConfig();
-  }
-  catch (visensor::exceptions const &ex) {
-    std::cout << "Setting of sensor ID failed!" << std::endl;
-    std::cout <<  "Exception was: " << ex.what() << std::endl;
-    return false;
-  }
-  std::cout << std::endl;
   return true;
 }
 
@@ -870,15 +881,9 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
   //check if the calibration need to be converted
   if (old_list.size() == 0) {
     std::cout << "Try to copy possible available calibration ... ";
-    if (loadXmlCameraCalibrationFile("/tmp/calibration.xml")) {
-      std::cout << "done." << std::endl;
-      if (!convertCalibration()) {
-        std::cerr << "Could not convert calibration to new format" << std::endl;
-        return false;
-      }
-    }
-    else {
-      std::cout << "No calibration file found, nothing to convert" << std::endl;
+    if (!convertCalibration()) {
+      std::cerr << "Could not convert calibration to new format" << std::endl;
+      return false;
     }
   }
   else {
