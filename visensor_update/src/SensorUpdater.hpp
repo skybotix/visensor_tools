@@ -42,9 +42,8 @@
 #include "communication_layers/WebClient.hpp"
 
 // include from libvisensor
-#include "communication_layers/SshConnections.hpp"
-//#include <visensor/visensor.hpp>
-#include <visensor_impl.hpp>
+#include "visensor_impl.hpp"
+#include "communication_layers/ssh_connections.hpp"
 
 
 class SensorUpdater {
