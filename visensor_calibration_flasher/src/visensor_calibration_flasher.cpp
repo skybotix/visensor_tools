@@ -101,7 +101,7 @@ int main(int argc, char **argv)
   camCalibration.resize(list_of_camera_ids.size());
 
   char answer;
-  std::cout << "Overwrite factory calibration? [y/N]" << std::endl;
+  std::cout << std::endl << "Overwrite factory calibration? [y/N]" << std::endl;
   std::cin >> answer;
   std::cout << "\n";
 
@@ -165,8 +165,8 @@ int main(int argc, char **argv)
     distortion_model.assign(cam_params["distortion_model"]);
     XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
     if (distortion_model == std::string("radtan"))  {
+      camera_calibration.lens_model_ = std::make_shared<visensor::ViCameraLensModelRadial>();
       visensor::ViCameraLensModelRadial::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
-      lens_model->setType();
 
       if (static_cast<unsigned int>(distortion_coeffs.size()) < lens_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the radtan projection model. Abort, abort!\n";
@@ -178,8 +178,8 @@ int main(int argc, char **argv)
       lens_model->r2_ = (double) distortion_coeffs[3];
     }
     else if (distortion_model == std::string("equidistant")) {
+      camera_calibration.lens_model_ = std::make_shared<visensor::ViCameraLensModelEquidistant>();
       visensor::ViCameraLensModelEquidistant::Ptr lens_model = camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
-      lens_model->setType();
 
       if (static_cast<unsigned int>(distortion_coeffs.size()) < lens_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the equidistant projection model. Abort, abort!\n";
@@ -198,8 +198,8 @@ int main(int argc, char **argv)
     camera_model.assign(cam_params["camera_model"]);
     XmlRpc::XmlRpcValue intrinsics = cam_params["intrinsics"];
     if (camera_model == std::string("pinhole")) {
+      camera_calibration.projection_model_ = std::make_shared<visensor::ViCameraProjectionModelPinhole>();
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
-      projection_model->setType();
 
       if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the pinhole projection model. Abort, abort!\n";
@@ -211,8 +211,8 @@ int main(int argc, char **argv)
       projection_model->principal_point_v_ = (double) intrinsics[3];
     }
     else if (camera_model == std::string("omnidirectional")){
+      camera_calibration.projection_model_ = std::make_shared<visensor::ViCameraProjectionModelOmnidirectional>();
       visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model = camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
-      projection_model->setType();
 
       if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
         std::cerr << "To few coeffizients are given for the omnidirectional projection model. Abort, abort!\n";

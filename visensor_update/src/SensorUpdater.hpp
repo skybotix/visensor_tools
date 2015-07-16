@@ -39,11 +39,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include "communication_layers/WebClient.hpp"
-
 // include from libvisensor
-#include "communication_layers/SshConnections.hpp"
+#include "communication_layers/WebClient.hpp"
+#include "communication_layers/ssh_connections.hpp"
 #include "networking/file_transfer.hpp"
+#include "visensor_impl.hpp"
 
 class SensorUpdater {
  public:
