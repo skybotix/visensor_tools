@@ -88,7 +88,7 @@ bool SensorUpdater::parseVersionDefault(VersionEntry& package, const std::string
   }
 
   pSsh_->runCommand( std::string("dpkg -l | grep ") + prefix,
-                     output,
+                     &output,
                      exitcode );
 
   if (exitcode != 0) {
@@ -430,7 +430,7 @@ bool SensorUpdater::sensorReboot(void) const
 
   // run command
   pSsh_->runCommand( std::string("reboot"),
-                     output,
+                     &output,
                      exitcode );
 
   std::cout << "Rebooting sensor...\n";
@@ -459,7 +459,7 @@ bool SensorUpdater::sensorInstallDebFile(const std::string &remotefile)
 
   // run command
   pSsh_->runCommand( std::string("dpkg -i ") + remotefile,
-                     output,
+                     &output,
                      exitcode );
 
   // mount read-only after changes
@@ -489,7 +489,7 @@ bool SensorUpdater::sensorRemoveDeb(const std::string &package_name)
 
   // run command
   pSsh_->runCommand( std::string("dpkg -P ") + package_name,
-                     output,
+                     &output,
                      exitcode );
 
   // mount read-only after changes
@@ -520,7 +520,7 @@ bool SensorUpdater::sensorSetMountRW(bool RW)
 
   // run command
   pSsh_->runCommand( cmd,
-                     output,
+                     &output,
                      exitcode );
 
   //0 and 255 are success exit codes
