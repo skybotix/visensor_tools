@@ -8,26 +8,26 @@
 #ifndef SRC_VISENSOR_CALIBRATION_FLASHER_HPP_
 #define SRC_VISENSOR_CALIBRATION_FLASHER_HPP_
 
-
 #include "visensor_impl.hpp"
 
-class CalibrationFlasher {
+class CalibrationFlasher
+{
  public:
   CalibrationFlasher();
-  virtual ~CalibrationFlasher() {
+  virtual ~CalibrationFlasher()
+  {
   }
 
   void printAllCameraCalibration(void);
   void printCameraCalibration(const visensor::ViCameraCalibration& config);
 
-  bool deleteCalibration(const visensor::SensorId::SensorId cam_id,
-                         const int slot_id,
-                         const bool is_flipped,
-                         const visensor::ViCameraProjectionModel::ProjectionModelTypes  projection_model_type,
-                         const visensor::ViCameraLensModel::LensModelTypes lens_model_type);
-  bool parseCameraCalibration(const YAML::Node cam_params, visensor::ViCameraCalibration& camera_calibration);
-  bool addCalibration(const YAML::Node cam_params, const int slot_id);
-
+  bool deleteCalibration(
+      const visensor::SensorId::SensorId cam_id, const int slot_id, const bool is_flipped,
+      const visensor::ViCameraProjectionModel::ProjectionModelTypes projection_model_type,
+      const visensor::ViCameraLensModel::LensModelTypes lens_model_type);
+  bool parseCameraCalibration(const YAML::Node& cam_params,
+                              visensor::ViCameraCalibration& camera_calibration);
+  bool addCalibration(const YAML::Node& cam_params, const int slot_id);
 
  private:
   visensor::ViSensorDriver drv_;

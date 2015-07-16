@@ -43,7 +43,6 @@ void printArgs(void)
 {
   std::cout << "visensor_calibration_flasher <SENSOR_IP> <COMMAND> [CMD_ARGS]" << std::endl;
   std::cout << std::endl;
-
   std::cout << "  Available commands are:" << std::endl;
   std::cout << "     show                   prints all the saved calibration." << std::endl;
   std::cout << "     add <path> <slot_id>   add an new calibration to the sensor." << std::endl;
