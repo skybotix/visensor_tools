@@ -39,11 +39,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-#include "communication_layers/WebClient.hpp"
-
 // include from libvisensor
-#include "communication_layers/SshConnections.hpp"
+#include "communication_layers/WebClient.hpp"
+#include "communication_layers/ssh_connections.hpp"
 #include "networking/file_transfer.hpp"
+#include "visensor_impl.hpp"
 
 class SensorUpdater {
  public:
@@ -172,13 +172,6 @@ class SensorUpdater {
 
  private:
 
-//  parse_function_map create_possible_pkgs_map() {
-//    parse_function_map map;
-//    map.insert(parse_function_map::value_type("visensor-fpga-bitstream", &SensorUpdater::parseVersionFpgaBitstream));
-//    map.insert(parse_function_map::value_type("visensor-linux-embedded", &SensorUpdater::parseVersionDefault));
-//    map.insert(parse_function_map::value_type("visensor-kernel-modules", &SensorUpdater::parseVersionDefault));
-//    return map;
-//  };
 
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
