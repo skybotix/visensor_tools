@@ -141,7 +141,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
 
   /* run command */
   pSsh_->runCommand( std::string("/home/root/fpga/fpga_version.bash"),
-                     output,
+                     &output,
                      exitcode );
 
 
