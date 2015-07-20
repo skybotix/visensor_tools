@@ -547,24 +547,33 @@ bool SensorUpdater::convertCalibration()
 {
   visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<
       visensor::ViSensorConfiguration>(pFile_transfer_);
-  std::cout << "Convert calibration to new format ... ";
+  std::cout << "Load old format ... ";
 
   std::string tmp_calibration_filename("/tmp/calibration.xml");
   if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
+    std::cout << "failed" << std::endl;
     std::cout << "no calibration file was found, assume that the sensor is not yet calibrated"
               << std::endl;
     return true;
   }
+  std::cout << "done." << std::endl;
 
+  std::cout << "Load new configuration in case the conversation is done multiple time... ";
   // try to load existing configuration already saved in the new format
   try {
-    config_server->loadConfig();
+    if (!config_server->loadConfig()) {
+      std::cout << "ignore" << std::endl
+                << "no new configurations were found, assume that the sensor has none" << std::endl;
+    } else {
+      std::cout << "done." << std::endl;
+    }
   } catch (visensor::exceptions const &ex) {
     std::cout << "ignore" << std::endl
               << "no new configurations were found, assume that the sensor has none" << std::endl;
     std::cout << "Exception was: " << ex.what() << std::endl;
   }
 
+  std::cout << "Convert calibration to new format ... ";
   std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(
       tmp_calibration_filename);
   if (calibration_list.size() == 0) {
@@ -588,7 +597,7 @@ bool SensorUpdater::convertCalibration()
     std::cout << "Exception was: " << ex.what() << std::endl;
     exit(1);
   }
-  std::cout << "done." << std::endl;
+  std::cout << "done." << std::endl << std::endl;
   return true;
 }
 
