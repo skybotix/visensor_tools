@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -29,7 +29,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 
 #ifndef UPDATE_CONFIG_HPP_
 #define UPDATE_CONFIG_HPP_
@@ -66,7 +65,6 @@ namespace UpdateConfig
         "develop/adis16488"
     };
 
-
   /* which packages do we want to install, if we do a sensor update */
   const std::vector<std::string> repo_mandatory_pkgs =
       {
@@ -74,8 +72,6 @@ namespace UpdateConfig
           std::string("visensor-kernel-modules"),
           std::string("visensor-linux-embedded")
       };
-
-
 }
 
 #endif /* UPDATE_CONFIG_HPP_ */

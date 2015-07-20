@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -32,19 +32,21 @@
 
 #ifndef SENSORUPDATER_HPP_
 #define SENSORUPDATER_HPP_
-
-#include "update_config.hpp"
-
-#include "communication_layers/SshConnection.hpp"
-#include "communication_layers/WebClient.hpp"
-
 #include <vector>
 #include <tuple>
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
+// include from libvisensor
+#include "communication_layers/ssh_connections.hpp"
+#include "communication_layers/WebClient.hpp"
+#include "visensor_impl.hpp"
+
+#include "update_config.hpp"
 
 class SensorUpdater {
  public:
-
   /* some typedefs */
   struct VersionEntry {
     std::string package_name;
@@ -72,47 +74,47 @@ class SensorUpdater {
     {
       return !(*this<rhs) && !(*this==rhs);
     }
-
   };
 
   typedef std::vector<VersionEntry> VersionList;
-
 
   SensorUpdater(const std::string &hostname);
   virtual ~SensorUpdater();
 
   /* repo functions */
-  bool getVersionInstalled(VersionList &outPackageList, const std::string &prefix, bool dontParseVersion=false);
-  bool getVersionsOnServer(SensorUpdater::VersionList &outPackageList, UpdateConfig::REPOS repo);
+  bool getVersionInstalled(VersionList* outPackageList, const std::string &prefix, bool dontParseVersion=false);
+  bool getVersionsOnServer(SensorUpdater::VersionList* outPackageList, const UpdateConfig::REPOS& repo);
   bool printVersionsInstalled(void);
-  bool printVersionsRepo(UpdateConfig::REPOS repo);
+  bool printVersionsRepo(UpdateConfig::REPOS& repo);
 
-  bool getUpdateList(SensorUpdater::VersionList &outList, const UpdateConfig::REPOS &repo);
-
+  bool getUpdateList(SensorUpdater::VersionList& outList, const UpdateConfig::REPOS& repo);
 
   /* package functions */
-  bool downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
-  bool installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
+  bool downloadPackagesToPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);
+  bool installPackagesFromPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);
 
+  /* calibration functions */
+  bool convertCalibration();
+  std::vector<visensor::ViCameraCalibration>  parseXmlCameraCalibration(const std::string& xml_filename);
+  bool checkCalibrationConvertion(const VersionList& old_list, const VersionList& new_list);
+  bool loadXmlCameraCalibrationFile(const std::string& local_calibration_filename);
+  bool loadPropertyTree(const std::string& calibration_filename, boost::property_tree::ptree* tree);
 
   /* sensor functions */
-  bool sensorInstallDebMemory(const std::string &debian_package);
-  bool sensorInstallDebFile(const std::string &file);
-  bool sensorRemoveDeb(const std::string &package_name);
+  bool sensorInstallDebMemory(const std::string& debian_package);
+  bool sensorInstallDebFile(const std::string& file);
+  bool sensorRemoveDeb(const std::string& package_name);
 
   bool sensorClean(void);
   bool sensorReboot(void) const;
-
   bool sensorSetMountRW(bool RW);
 
-
   /* high level update functions */
-  bool sensorUpdate(const UpdateConfig::REPOS &repo);
-
+  bool sensorUpdate(const UpdateConfig::REPOS& repo);
 
  private:
-  SshConnection *pSsh_; //ssh connection to sensor
-
+  visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
+  visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
 };
 
 #endif /* SENSORUPDATER_HPP_ */
