@@ -43,7 +43,7 @@ namespace UpdateConfig
   const std::string ssh_password = "";
 
   /* update repo configuration */
-  const std::string hostname = "http://skybotix.com/downloads/vi-firmware-test";
+  const std::string hostname = "http://skybotix.com/downloads/vi-firmware";
 
   /*standard prefix for debian package filenames */
   const std::string prefix("visensor");
