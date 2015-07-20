@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -127,7 +127,6 @@ bool cmdReboot(SensorUpdater &updater)
   return updater.sensorReboot();
 }
 
-
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "visensor_update");
@@ -153,8 +152,6 @@ int main(int argc, char** argv)
   std::vector<std::string> args;
   for(int i=1; i<argc; i++)
     args.push_back( std::string(argv[i]) );
-
-  /* find all sensors using auto discovery */
 
   //make IP optional
   std::string hostname,
