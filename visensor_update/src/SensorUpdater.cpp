@@ -57,7 +57,7 @@ SensorUpdater::~SensorUpdater()
  * for all packages that start with the given packagename prefix
  */
 bool SensorUpdater::getVersionInstalled(VersionList* outPackageList, const std::string& prefix,
-bool dontParseVersion)
+                                        bool dontParseVersion)
 {
   int exitcode = 127;
 
@@ -551,7 +551,7 @@ bool SensorUpdater::convertCalibration()
 
   std::string tmp_calibration_filename("/tmp/calibration.xml");
   if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
-    std::cout << "no calibration file was found, assume that the sensor is not yet calibrate"
+    std::cout << "no calibration file was found, assume that the sensor is not yet calibrated"
               << std::endl;
     return true;
   }
@@ -561,7 +561,7 @@ bool SensorUpdater::convertCalibration()
     config_server->loadConfig();
   } catch (visensor::exceptions const &ex) {
     std::cout << "ignore" << std::endl
-              << "no new configurations were found, assume that the sensor has no" << std::endl;
+              << "no new configurations were found, assume that the sensor has none" << std::endl;
     std::cout << "Exception was: " << ex.what() << std::endl;
   }
 
@@ -569,7 +569,7 @@ bool SensorUpdater::convertCalibration()
       tmp_calibration_filename);
   if (calibration_list.size() == 0) {
     std::cout << "failed\n";
-    std::cout << "no calibration were found" << std::endl;
+    std::cout << "no calibrations were found" << std::endl;
     exit(1);
   }
   try {
