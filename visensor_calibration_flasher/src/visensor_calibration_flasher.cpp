@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -34,10 +34,19 @@
 
 #include <visensor_impl.hpp>
 
-void printSensorConfig(const visensor::ViCameraCalibration& config){
+static const std::map<int, std::string> ROS_CAMERA_NAMES {
+  { visensor::SensorId::SensorId::CAM0, "/cam0" },
+  { visensor::SensorId::SensorId::CAM1, "/cam1" },
+  { visensor::SensorId::SensorId::CAM2, "/cam2" },
+  { visensor::SensorId::SensorId::CAM3, "/cam3" },
+  { visensor::SensorId::SensorId::FLIR0, "/tau0" },
+  { visensor::SensorId::SensorId::FLIR1, "/tau1" },
+  { visensor::SensorId::SensorId::FLIR2, "/tau2" },
+  { visensor::SensorId::SensorId::FLIR3, "/tau3" } };
 
+void printSensorConfig(const visensor::ViCameraCalibration& config)
+{
   std::cout << "Calibration of camera " << config.cam_id_ << " is:\n";
-
   std::cout << "Projection:\n";
   std::cout << "\tModel:\n\t\t";
   std::cout << config.projection_model_->type_name_ << std::endl;
@@ -46,7 +55,6 @@ void printSensorConfig(const visensor::ViCameraCalibration& config){
   for (unsigned int i = 0; i < coefficients.size(); ++i){
     std::cout << coefficients[i] << " ";
   }
-
   std::cout << "\nLens Coefficient:\n";
   std::cout << "\tModel:\n\t\t";
   std::cout << config.lens_model_->type_name_ << std::endl;
@@ -64,24 +72,10 @@ void printSensorConfig(const visensor::ViCameraCalibration& config){
     std::cout << "\t" << config.t_[i] << "\t";
   }
 
-
   std::cout << "\nresolution is:\n\t" << config.resolution_[0] << ", " << config.resolution_[1] << std::endl;
-
-
   std::cout << "flip_camera:\n\t" << config.is_flipped_ << std::endl;
-
   std::cout << std::endl;
 }
-
-static const std::map<int, std::string> ROS_CAMERA_NAMES {
-  { visensor::SensorId::SensorId::CAM0, "/cam0" },
-  { visensor::SensorId::SensorId::CAM1, "/cam1" },
-  { visensor::SensorId::SensorId::CAM2, "/cam2" },
-  { visensor::SensorId::SensorId::CAM3, "/cam3" },
-  { visensor::SensorId::SensorId::FLIR0, "/tau0" },
-  { visensor::SensorId::SensorId::FLIR1, "/tau1" },
-  { visensor::SensorId::SensorId::FLIR2, "/tau2" },
-  { visensor::SensorId::SensorId::FLIR3, "/tau3" } };
 
 int main(int argc, char **argv)
 {
@@ -116,15 +110,11 @@ int main(int argc, char **argv)
   {
     visensor::ViCameraCalibration camera_calibration;
     std::string camera_model;
-    std::string distortion_model;
-
     camera_calibration.cam_id_ = static_cast<int>(camera_id);
-
 
     std::cout << "Reading out " << ROS_CAMERA_NAMES.at(static_cast<int>(camera_id)) << std::endl;
     XmlRpc::XmlRpcValue cam_params;
     nh.getParam(ROS_CAMERA_NAMES.at(static_cast<int>(camera_id)), cam_params);
-
 
     assert(cam_params.hasMember("distortion_coeffs"));
     assert(cam_params.hasMember("intrinsics"));
@@ -132,17 +122,14 @@ int main(int argc, char **argv)
     assert(cam_params.hasMember("camera_model"));
     assert(cam_params.hasMember("distortion_model"));
     assert(cam_params.hasMember("T_cam_imu"));
-    XmlRpc::XmlRpcValue T_C_I;
-
-
-
     if (cam_params.hasMember("flip_camera")){
       camera_calibration.is_flipped_ = cam_params["flip_camera"];
     }
     else{
       camera_calibration.is_flipped_ = true;
     }
-    T_C_I = cam_params["T_cam_imu"];
+
+    XmlRpc::XmlRpcValue T_C_I = cam_params["T_cam_imu"];
     //EIGEN USES COLUMN MAJOR ORDER!
     camera_calibration.R_.resize(9);
     camera_calibration.R_.at(0) = (double) T_C_I[0][0];
@@ -160,8 +147,7 @@ int main(int argc, char **argv)
     camera_calibration.t_.at(1) = (double) T_C_I[1][3];
     camera_calibration.t_.at(2) = (double) T_C_I[2][3];
 
-
-
+    std::string distortion_model;
     distortion_model.assign(cam_params["distortion_model"]);
     XmlRpc::XmlRpcValue distortion_coeffs = cam_params["distortion_coeffs"];
     if (distortion_model == std::string("radtan"))  {
@@ -228,21 +214,16 @@ int main(int argc, char **argv)
       std::cerr << "Current Camera Model is supported. Abort, abort!\n";
       return 1;
     }
-
     XmlRpc::XmlRpcValue resolution = cam_params["resolution"];
     camera_calibration.resolution_[0] = (int) resolution[0];
     camera_calibration.resolution_[1] = (int) resolution[1];
-
     camera_calibration.slot_id_ = 0;
-
 
     // delete every factroy calibration of the corresponding cam
     try {
       privat_drv->cleanCameraCalibrations(camera_id, 0);
-
       printSensorConfig(camera_calibration);
       privat_drv->setCameraFactoryCalibration(camera_calibration);
-
     }
     catch(visensor::exceptions const &ex) {
       std::cerr << "Calibration upload failed! Exception was:\n" << ex.what();

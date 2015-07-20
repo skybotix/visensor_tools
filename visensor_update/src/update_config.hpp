@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -30,7 +30,6 @@
  *
  */
 
-
 #ifndef UPDATE_CONFIG_HPP_
 #define UPDATE_CONFIG_HPP_
 
@@ -44,7 +43,7 @@ namespace UpdateConfig
   const std::string ssh_password = "";
 
   /* update repo configuration */
-  const std::string hostname = "http://skybotix.com/downloads/vi-firmware";
+  const std::string hostname = "http://skybotix.com/downloads/vi-firmware-test";
 
   /*standard prefix for debian package filenames */
   const std::string prefix("visensor");
@@ -66,7 +65,6 @@ namespace UpdateConfig
         "develop/adis16488"
     };
 
-
   /* which packages do we want to install, if we do a sensor update */
   const std::vector<std::string> repo_mandatory_pkgs =
       {
@@ -74,8 +72,6 @@ namespace UpdateConfig
           std::string("visensor-kernel-modules"),
           std::string("visensor-linux-embedded")
       };
-
-
 }
 
 #endif /* UPDATE_CONFIG_HPP_ */
