@@ -602,7 +602,8 @@ std::vector<visensor::ViCameraCalibration> SensorUpdater::parseXmlCameraCalibrat
         calibration.cam_id_ = std::stoi(elements[1]);
         calibration.slot_id_ = std::stoi(elements[2])/2;
         calibration.is_flipped_ = std::stoi(elements[2])%2;
-        calibration.resolution_ = {752, 480};
+        calibration.resolution_[0] = 752;
+        calibration.resolution_[1] = 480;
         //build childtree name
         std::string cam_id_str = boost::lexical_cast<std::string>(calibration.cam_id_);
         std::string slot_str = boost::lexical_cast<std::string>(std::stoi(elements[2]));
