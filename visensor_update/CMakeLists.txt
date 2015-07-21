@@ -9,7 +9,6 @@ project(visensor_update)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  yaml_cpp_catkin
 )
 
 find_package(libvisensor 2.0.0 REQUIRED)
