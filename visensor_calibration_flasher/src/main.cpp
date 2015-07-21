@@ -45,7 +45,7 @@ void printArgs(void)
   std::cout << std::endl;
   std::cout << "  Available commands are:" << std::endl;
   std::cout << "     show                   prints all the saved calibration." << std::endl;
-  std::cout << "     add <path> <slot_id>   add an new calibration to the sensor." << std::endl;
+  std::cout << "     add <path> <slot_id>   add a new calibration to the sensor." << std::endl;
   std::cout << "     delete <cam_id> <slot_id> <is_flipped> <projection_type> <lens_model_type>\n";
   std::cout << "                            delete the defined calibration" << std::endl;
   std::cout << std::endl;
@@ -70,7 +70,7 @@ bool cmdDelete(ros::NodeHandle& nh, std::string& target_name, std::vector<std::s
   } else if (args.at(3) == "omnidirectional") {
     projection_type = visensor::ViCameraProjectionModel::ProjectionModelTypes::OMNIDIRECTIONAL;
   } else {
-    ROS_WARN("Projection Model not defined. use either pinhole or omnidirectional.\n");
+    ROS_WARN("Projection Model not defined. Use either pinhole or omnidirectional.\n");
     return false;
   }
 
@@ -79,7 +79,7 @@ bool cmdDelete(ros::NodeHandle& nh, std::string& target_name, std::vector<std::s
   } else if (args.at(4) == "equidistant") {
     lens_model_type = visensor::ViCameraLensModel::LensModelTypes::EQUIDISTANT;
   } else {
-    ROS_WARN("Lens Model not defined. use either radial or equidistant.\n");
+    ROS_WARN("Lens Model not defined. Use either radial or equidistant.\n");
     return false;
   }
 
