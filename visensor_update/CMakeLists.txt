@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
 
-find_package(libvisensor 2.0.0 REQUIRED)
+find_package(libvisensor 2.1.0 REQUIRED)
 
 
 ############
