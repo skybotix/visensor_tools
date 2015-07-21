@@ -34,6 +34,7 @@
 #define SENSORUPDATER_HPP_
 #include <vector>
 #include <tuple>
+#include <map>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -43,17 +44,61 @@
 #include "communication_layers/WebClient.hpp"
 #include "visensor_impl.hpp"
 
-#include "update_config.hpp"
-
 class SensorUpdater {
  public:
+  /* where are the repos on the ftp server (ftp relative path) */
+  enum class REPOS
+    {
+      REPO_RELEASE,
+      REPO_DEV,
+      REPO_16448_RELEASE,
+      REPO_16448_DEV,
+      REPO_16488_RELEASE,
+      REPO_16488_DEV
+    };
+  enum class SUPPORTED_IMU
+    {
+      UNKNOWN,
+      ADIS_16448,
+      ADIS_16488
+    };
+  enum class SUPPORTED_FPGA_CONFIGS
+    {
+      UNKNOWN,
+      NORMAL,
+      FLIR
+    };
+
   /* some typedefs */
   struct VersionEntry {
     std::string package_name;
     unsigned int version_major;
     unsigned int version_minor;
     unsigned int version_patch;
+    SensorUpdater::SUPPORTED_FPGA_CONFIGS sensor_type;
+    SensorUpdater::SUPPORTED_IMU imu_type;
     std::string path;
+
+    VersionEntry() :
+        package_name(""),
+        version_major(0),
+        version_minor(0),
+        version_patch(0),
+        sensor_type(SUPPORTED_FPGA_CONFIGS::UNKNOWN),
+        imu_type(SUPPORTED_IMU::UNKNOWN),
+        path("")
+    {
+    }
+    VersionEntry(unsigned int major, unsigned int minor, unsigned int patch) :
+        package_name(""),
+        version_major(major),
+        version_minor(minor),
+        version_patch(patch),
+        sensor_type(SUPPORTED_FPGA_CONFIGS::UNKNOWN),
+        imu_type(SUPPORTED_IMU::UNKNOWN),
+        path("")
+    {
+    }
 
     /* lexicographical version comparison */
     bool operator<(const VersionEntry& rhs) const
@@ -78,16 +123,20 @@ class SensorUpdater {
 
   typedef std::vector<VersionEntry> VersionList;
 
+  typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry* package, const std::string& prefix); // function pointer type
+  typedef std::map<std::string, parseFunction> parse_function_map;
   SensorUpdater(const std::string &hostname);
   virtual ~SensorUpdater();
 
   /* repo functions */
-  bool getVersionInstalled(VersionList* outPackageList, const std::string &prefix, bool dontParseVersion=false);
-  bool getVersionsOnServer(SensorUpdater::VersionList* outPackageList, const UpdateConfig::REPOS& repo);
+  bool getVersionInstalled(VersionList* outPackageList);
+  bool parseVersionDefault(VersionEntry* package, const std::string &prefix);
+  bool parseVersionFpgaBitstream(VersionEntry* package, const std::string &prefix);
+  bool getVersionsOnServer(SensorUpdater::VersionList* outPackageList, const REPOS& repo);
   bool printVersionsInstalled(void);
-  bool printVersionsRepo(UpdateConfig::REPOS& repo);
+  bool printVersionsRepo(const REPOS& repo);
 
-  bool getUpdateList(SensorUpdater::VersionList& outList, const UpdateConfig::REPOS& repo);
+  bool getUpdateList(SensorUpdater::VersionList* outList, const REPOS& repo);
 
   /* package functions */
   bool downloadPackagesToPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);
@@ -110,11 +159,53 @@ class SensorUpdater {
   bool sensorSetMountRW(bool RW);
 
   /* high level update functions */
-  bool sensorUpdate(const UpdateConfig::REPOS& repo);
+  bool sensorUpdate(REPOS& repo);
 
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
+
+  /* sensor ssh login configuration */
+  const std::string sshUsername() const {
+      return "root";
+  }
+  const std::string hostname() const {
+      return "http://skybotix.com/downloads/vi-firmware";
+  }
+
+  /* update repo configuration */
+  const std::string sshPassword() const {
+      return "";
+  }
+
+  /*standard prefix for debian package filenames */
+  const std::string prefix() const {
+      return "visensor";
+  }
 };
+
+static const std::map< SensorUpdater::REPOS, std::string> REPOS_PATH = {
+  {  SensorUpdater::REPOS::REPO_RELEASE, std::string("release") },
+  {  SensorUpdater::REPOS::REPO_DEV, std::string("develop") },
+  {  SensorUpdater::REPOS::REPO_16448_RELEASE, std::string("release") },
+  {  SensorUpdater::REPOS::REPO_16448_DEV, std::string("develop") },
+  {  SensorUpdater::REPOS::REPO_16488_RELEASE, std::string("release/adis16488") },
+  {  SensorUpdater::REPOS::REPO_16488_DEV, std::string("develop/adis16488") }
+  };
+
+/* which packages do we want to install, if we do a sensor update */
+static const SensorUpdater::parse_function_map possible_pkgs_ {
+  {"visensor-fpga-bitstream", &SensorUpdater::parseVersionFpgaBitstream},
+  {"visensor-linux-embedded", &SensorUpdater::parseVersionDefault},
+  {"visensor-kernel-modules", &SensorUpdater::parseVersionDefault}
+};
+
+static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> supported_imu_ {
+  { "A48",  SensorUpdater::SUPPORTED_IMU::ADIS_16448},
+  { "A88",  SensorUpdater::SUPPORTED_IMU::ADIS_16488} };
+
+static const std::map<std::string, SensorUpdater::SUPPORTED_FPGA_CONFIGS> supported_fpga_configs_ {
+  { "a",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::NORMAL },
+  { "c",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::FLIR } };
 
 #endif /* SENSORUPDATER_HPP_ */
