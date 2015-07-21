@@ -245,7 +245,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
     projection_model->principal_point_v_ = intrinsics[3].as<double>();
     projection_model->mirror_xi_ = intrinsics[4].as<double>();
   } else {
-    std::cerr << "Current Camera Model is supported. Abort, abort!\n";
+    std::cerr << "Current Camera Model is not supported. Abort, abort!\n";
     return false;
   }
 
