@@ -3,7 +3,6 @@ project(visensor_calibration_flasher)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  yaml_cpp_catkin
 )
 
 find_package(libvisensor 2.0.0 REQUIRED)
@@ -15,7 +14,7 @@ catkin_package(
   INCLUDE_DIRS ${catkin_INCLUDE_DIRS}
   CATKIN_DEPENDS
   roscpp 
-  LIBRARIES libvisensor
+  libvisensor
 )
 
 add_executable(visensor_calibration_flasher src/visensor_calibration_flasher.cpp )
