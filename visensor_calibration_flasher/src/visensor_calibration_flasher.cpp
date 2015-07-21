@@ -186,7 +186,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
 
     if (static_cast<unsigned int>(distortion_coeffs.size())
         < lens_model->getCoefficients().size()) {
-      std::cerr << "To few coeffizients are given for the radtan projection model. Abort, abort!\n";
+      std::cerr << "To few coefficients are given for the radtan projection model. Abort, abort!\n";
       return false;
     }
     lens_model->k1_ = distortion_coeffs[0].as<double>();
@@ -201,7 +201,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
     if (static_cast<unsigned int>(distortion_coeffs.size())
         < lens_model->getCoefficients().size()) {
       std::cerr
-          << "To few coeffizients are given for the equidistant projection model. Abort, abort!\n";
+          << "To few coefficients are given for the equidistant projection model. Abort, abort!\n";
       return false;
     }
     lens_model->k1_ = distortion_coeffs[0].as<double>();
@@ -222,7 +222,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
 
     if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
       std::cerr
-          << "To few coeffizients are given for the pinhole projection model. Abort, abort!\n";
+          << "To few coefficients are given for the pinhole projection model. Abort, abort!\n";
       return false;
     }
     projection_model->focal_length_u_ = intrinsics[0].as<double>();
@@ -236,7 +236,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
 
     if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
       std::cerr
-          << "To few coeffizients are given for the omnidirectional projection model. Abort, abort!\n";
+          << "To few coefficients are given for the omnidirectional projection model. Abort, abort!\n";
       return false;
     }
     projection_model->focal_length_u_ = intrinsics[0].as<double>();
