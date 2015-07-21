@@ -45,8 +45,8 @@
 
 SensorUpdater::SensorUpdater(const std::string& hostname)
 {
-  pSsh_ = boost::make_shared<visensor::SshConnection>(hostname, sshUsername(),
-                                                      sshPassword());
+  pSsh_ = boost::make_shared<visensor::SshConnection>();
+  pSsh_->sshConnect(hostname, sshUsername(), sshPassword());
   pFile_transfer_ = boost::make_shared<visensor::FileTransfer>(pSsh_);
 }
 

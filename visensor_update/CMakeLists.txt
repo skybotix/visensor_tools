@@ -39,5 +39,5 @@ FILE(GLOB SRCS src/*.cpp src/communication_layers/*.cpp)
 
 add_executable(visensor_update  ${SRCS})
 
-TARGET_LINK_LIBRARIES(visensor_update  ${libvisensor_LIBRARIES} ${catkin_LIBRARIES}   boost_regex curl)
+TARGET_LINK_LIBRARIES(visensor_update  ${libvisensor_LIBRARIES} ${catkin_LIBRARIES} boost_system boost_regex curl)
 
