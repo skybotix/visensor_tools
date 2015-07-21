@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -38,16 +38,16 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 // include from libvisensor
-#include "communication_layers/WebClient.hpp"
 #include "communication_layers/ssh_connections.hpp"
-#include "networking/file_transfer.hpp"
+#include "communication_layers/WebClient.hpp"
 #include "visensor_impl.hpp"
 
 class SensorUpdater {
  public:
-
   /* where are the repos on the ftp server (ftp relative path) */
   enum class REPOS
     {
@@ -121,12 +121,11 @@ class SensorUpdater {
     {
       return !(*this<rhs) && !(*this==rhs);
     }
-
   };
 
   typedef std::vector<VersionEntry> VersionList;
 
-  typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry& package, const std::string &prefix); // function pointer type
+  typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry* package, const std::string& prefix); // function pointer type
   typedef std::map<std::string, parseFunction> parse_function_map;
 
   SensorUpdater();
@@ -135,36 +134,34 @@ class SensorUpdater {
   void connect(const std::string &target_ip);
 
   /* repo functions */
-  bool getVersionInstalled(VersionList &outPackageList);
-  bool parseVersionDefault(VersionEntry& package, const std::string &prefix);
-  bool parseVersionFpgaBitstream(VersionEntry& package, const std::string &prefix);
-  bool getVersionsOnServer(SensorUpdater::VersionList &outPackageList, REPOS repo);
-  bool getVersionsFromLocalPath(VersionList &outPackageList, std::string path);
+  bool getVersionInstalled(VersionList* outPackageList);
+  bool parseVersionDefault(VersionEntry* package, const std::string &prefix);
+  bool parseVersionFpgaBitstream(VersionEntry* package, const std::string &prefix);
+  bool getVersionsOnServer(SensorUpdater::VersionList* outPackageList, const REPOS& repo);
+  bool getVersionsFromLocalPath(VersionList* outPackageList, std::string path);
   bool printVersionsInstalled(void);
-  bool printVersionsRepo(REPOS repo);
+  bool printVersionsRepo(const REPOS& repo);
 
-  bool getUpdateList(SensorUpdater::VersionList &outList, const VersionList &packageVersionList, const REPOS &repo);
-
+  bool getUpdateList(SensorUpdater::VersionList* outList, const VersionList &packageVersionList, const REPOS &repo);
 
   /* package functions */
-  bool downloadPackagesToPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
-  bool installPackagesFromPath(SensorUpdater::VersionList &packageList, const std::string &localPath);
+  bool downloadPackagesToPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);
+  bool installPackagesFromPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);
 
   /* calibration functions */
   bool convertCalibration();
-  std::vector<visensor::ViCameraCalibration>  parseXmlCameraCalibration(std::string xml_filename);
-  bool checkCalibrationConvertion(VersionList old_list, VersionList new_list);
-  bool loadXmlCameraCalibrationFile(std::string local_calibration_filename);
-  bool loadPropertyTree(std::string calibration_filename, boost::property_tree::ptree& tree);
+  std::vector<visensor::ViCameraCalibration>  parseXmlCameraCalibration(const std::string& xml_filename);
+  bool checkCalibrationConvertion(const VersionList& old_list, const VersionList& new_list);
+  bool loadXmlCameraCalibrationFile(const std::string& local_calibration_filename);
+  bool loadPropertyTree(const std::string& calibration_filename, boost::property_tree::ptree* tree);
 
   /* sensor functions */
-  bool sensorInstallDebMemory(const std::string &debian_package);
-  bool sensorInstallDebFile(const std::string &file);
-  bool sensorRemoveDeb(const std::string &package_name);
+  bool sensorInstallDebMemory(const std::string& debian_package);
+  bool sensorInstallDebFile(const std::string& file);
+  bool sensorRemoveDeb(const std::string& package_name);
 
   bool sensorClean(void);
   bool sensorReboot(void) const;
-
   bool sensorSetMountRW(bool RW);
 
   /* high level update functions */
@@ -172,19 +169,11 @@ class SensorUpdater {
 
   bool sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList);
   bool sensorUploadFrom(const std::string path);
-
- private:
   bool checkRepo(REPOS &repo);
-
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
   bool is_ssh_initialized_; ///< check if updater is connected to the sensor
-
-
-
-
-
 
   /* sensor ssh login configuration */
   const std::string sshUsername() const {
@@ -203,7 +192,6 @@ class SensorUpdater {
   const std::string prefix() const {
       return "visensor";
   }
-
   const std::string remotePath() const {
     return "/tmp/";
   }
@@ -217,6 +205,7 @@ static const std::map< SensorUpdater::REPOS, std::string> REPOS_PATH = {
   {  SensorUpdater::REPOS::REPO_16488_RELEASE, std::string("release/adis16488") },
   {  SensorUpdater::REPOS::REPO_16488_DEV, std::string("develop/adis16488") }
   };
+
 /* which packages do we want to install, if we do a sensor update */
 static const SensorUpdater::parse_function_map possible_pkgs_ {
   {"visensor-fpga-bitstream", &SensorUpdater::parseVersionFpgaBitstream},
@@ -229,7 +218,7 @@ static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> sup
   { "A88",  SensorUpdater::SUPPORTED_IMU::ADIS_16488} };
 
 static const std::map<std::string, SensorUpdater::SUPPORTED_FPGA_CONFIGS> supported_fpga_configs_ {
-  { "a",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::NORMAL},
-  { "c",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::FLIR} };
+  { "a",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::NORMAL },
+  { "c",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::FLIR } };
 
 #endif /* SENSORUPDATER_HPP_ */

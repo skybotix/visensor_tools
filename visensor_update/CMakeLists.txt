@@ -8,7 +8,7 @@ project(visensor_update)
 
 
 find_package(catkin REQUIRED COMPONENTS
-  roscpp 
+  roscpp
 )
 
 find_package(libvisensor 2.0.0 REQUIRED)
@@ -39,5 +39,5 @@ FILE(GLOB SRCS src/*.cpp src/communication_layers/*.cpp)
 
 add_executable(visensor_update  ${SRCS})
 
-TARGET_LINK_LIBRARIES(visensor_update  ${libvisensor_LIBRARIES} ${catkin_LIBRARIES}   boost_regex curl)
+TARGET_LINK_LIBRARIES(visensor_update  ${libvisensor_LIBRARIES} ${catkin_LIBRARIES} boost_regex curl)
 
