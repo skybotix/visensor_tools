@@ -127,7 +127,8 @@ class SensorUpdater {
 
   typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry* package, const std::string& prefix); // function pointer type
   typedef std::map<std::string, parseFunction> parse_function_map;
-  SensorUpdater(const std::string &hostname);
+
+  SensorUpdater(const std::string& hostname);
   virtual ~SensorUpdater();
 
   /* repo functions */
@@ -138,7 +139,7 @@ class SensorUpdater {
   bool printVersionsInstalled(void);
   bool printVersionsRepo(const REPOS& repo);
 
-  bool getUpdateList(SensorUpdater::VersionList &outList, const VersionList &packageVersionList, const REPOS &repo);
+  bool getUpdateList(SensorUpdater::VersionList* outList, const VersionList &packageVersionList, const REPOS &repo);
 
   /* package functions */
   bool downloadPackagesToPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);

@@ -448,7 +448,7 @@ bool SensorUpdater::sensorClean(void)
 }
 
 /* get a list of the newest versions from the repo */
-bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packageVersionList, const REPOS &repo)
+bool SensorUpdater::getUpdateList(VersionList* outList, const VersionList &packageVersionList, const REPOS &repo)
 {
   // get the newest version from the repos
   VersionList allPackages;
@@ -812,11 +812,11 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
     return false;
   }
 
-  if(!getUpdateList(list, requestedVersionList, repo))
+  if(!getUpdateList(&list, requestedVersionList, repo))
   {
     return false;
   }
-  if(!getVersionInstalled(currentList)) {
+  if(!getVersionInstalled(&currentList)) {
     std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
     return false;
   }
