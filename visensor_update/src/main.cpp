@@ -34,6 +34,7 @@
 #include <map>
 #include <vector>
 
+#include <boost/regex.hpp>
 #include <ros/ros.h>
 #include <ros/package.h>
 
@@ -46,9 +47,13 @@ void printArgs(void)
 
     std::cout << "  Available commands are:" << std::endl;
     std::cout << "     update               updates the sensor to the newest software on the online repo, check for the correct IMU first" << std::endl;
-    std::cout << "     update-16448         updates the sensor with ADIS 16448 to the newest software on the online repo" << std::endl;
-    std::cout << "     update-16488         updates the sensor with ADIS 16488 to the newest software on the online repo" << std::endl;
+    std::cout << "     update <imu-type>    updates the sensor with the specified IMU version to the newest software on the online repo.\n"
+        "                                   The imu-type can be 16448 or 16488" << std::endl;
     std::cout << "     convert-calibration  converts the calibration format from libvisensor version 1.2.X to 2.0.X"  << std::endl;
+    std::cout << "     update <fpga-version> <kernel-version> <embedded-version>\n"
+                 "                          updates the sensor to the given version from the online repo, check for the correct IMU first" << std::endl;
+    std::cout << "     update <imu-type> <fpga-version> <kernel-version> <embedded-version>\n"
+                 "                          updates the sensor to the given version from the online repo, select the IMU" << std::endl;
     std::cout << "     clean                removes all software on the sensor" << std::endl;
     std::cout << "     version              shows installed packages " << std::endl;
     std::cout << "     reboot               reboot sensor " << std::endl;
@@ -61,14 +66,50 @@ void printArgs(void)
     std::cout << std::endl;
 }
 
-bool update(SensorUpdater& updater, SensorUpdater::REPOS repo)
+SensorUpdater::VersionEntry parse_version(std::string version_string) {
+  SensorUpdater::VersionEntry package;
+  boost::regex version_expression("([0-9]+)\\.([0-9]+)\\.([0-9]+)");
+  boost::cmatch what;
+  /* find matches of the version */
+  if( regex_match(version_string.c_str(), what, version_expression) )
+  {
+   // what[0] contains whole version
+   // what[1] contains the major version number
+   // what[2] contains the minor version number
+   // what[3] contains the patch version number
+   package.version_major = boost::lexical_cast<unsigned int>( what[1] );
+   package.version_minor = boost::lexical_cast<unsigned int>( what[2] );
+   package.version_patch = boost::lexical_cast<unsigned int>( what[3] );
+  }
+  else {
+   //regex match failed (file is not a valid package name...)
+   std::cout << "failed to parse version: " << version_string.c_str() << "\n";
+   printArgs();
+   exit(1);
+  }
+  return package;
+}
+
+void parse_versions(const std::vector<std::string> &args, SensorUpdater::VersionList& requestedVersions) {
+  SensorUpdater::VersionEntry arg_fpga_version = parse_version(args[0]);
+  arg_fpga_version.package_name = "visensor-fpga-bitstream";
+  requestedVersions.push_back(arg_fpga_version);
+  SensorUpdater::VersionEntry arg_kernel_version = parse_version(args[1]);
+  arg_kernel_version.package_name = "visensor-kernel-modules";
+  requestedVersions.push_back(arg_kernel_version);
+  SensorUpdater::VersionEntry arg_embedded_version = parse_version(args[2]);
+  arg_embedded_version.package_name = "visensor-linux-embedded";
+  requestedVersions.push_back(arg_embedded_version);
+}
+
+bool update(SensorUpdater &updater, SensorUpdater::REPOS repo, SensorUpdater::VersionList & requestedVersionList)
 {
   /* print version before update */
   std::cout << "Before update:\n";
   updater.printVersionsInstalled();
 
   /* install the newest version of all mandatory packages */
-  bool success = updater.sensorUpdate(repo);
+  bool success = updater.sensorUpdate(repo, requestedVersionList);
 
   /* print version before update */
   std::cout << "After update:\n";
@@ -80,52 +121,108 @@ bool update(SensorUpdater& updater, SensorUpdater::REPOS repo)
   return success;
 }
 
-bool cmdUpdate(SensorUpdater &updater)
-{
-  return update(updater, SensorUpdater::REPOS::REPO_RELEASE);
+bool cmdUpdate(SensorUpdater &updater, std::vector<std::string> &args) {
+  SensorUpdater::VersionList requestedVersions;
+  std::map<std::string, SensorUpdater::REPOS> arg_repos =
+  {
+    {"16448", SensorUpdater::REPOS::REPO_16448_RELEASE},
+    {"16488", SensorUpdater::REPOS::REPO_16488_RELEASE}
+  };
+
+  // check if command: update <imu-type>
+  if(args.size() == 1)  {
+    SensorUpdater::VersionList requestedVersions;
+    std::string arg_repo = args[0];
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    return update(updater, arg_repos.at(arg_repo), requestedVersions);
+  }
+  // check if command: update <fpga-version> <kernel-version> <embedded-version>
+  else if(args.size() == 3)  {
+    parse_versions(args, requestedVersions);
+    return update(updater, SensorUpdater::REPOS::REPO_RELEASE, requestedVersions);
+  }
+  // check if command: update <imu-type> <fpga-version> <kernel-version> <embedded-version>
+  else if(args.size() == 4)  {
+    std::string arg_repo = args[0];
+    args.erase(args.begin());
+    parse_versions(args, requestedVersions);
+
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    return update(updater, arg_repos.at(arg_repo), requestedVersions);
+  }
+  // use the default
+  return update(updater, SensorUpdater::REPOS::REPO_RELEASE, requestedVersions);
 }
 
-bool cmdUpdate16488(SensorUpdater &updater)
+bool cmdUpdateDevelop(SensorUpdater &updater, std::vector<std::string> &args)
 {
-  return update(updater, SensorUpdater::REPOS::REPO_16488_RELEASE);
+  SensorUpdater::VersionList requestedVersions;
+  std::map<std::string, SensorUpdater::REPOS> arg_repos =
+  {
+    {"16448", SensorUpdater::REPOS::REPO_16448_DEV},
+    {"16488", SensorUpdater::REPOS::REPO_16488_DEV}
+  };
+
+  // check if command: update <imu-type>
+  if(args.size() == 1)  {
+    std::string arg_repo = args[0];
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    return update(updater, arg_repos.at(arg_repo), requestedVersions);
+  }
+  // check if command: update <fpga-version> <kernel-version> <embedded-version>
+  else if(args.size() == 3)  {
+    parse_versions(args, requestedVersions);
+    return update(updater, SensorUpdater::REPOS::REPO_DEV, requestedVersions);
+  }
+  // check if command: update <imu-type> <fpga-version> <kernel-version> <embedded-version>
+  else if(args.size() == 4)  {
+    std::string arg_repo = args[0];
+    args.erase(args.begin());
+    parse_versions(args, requestedVersions);
+
+    if( !arg_repos.count( arg_repo ) )
+    {
+      //invalid command
+      printArgs();
+      exit(-1);
+    }
+    return update(updater, arg_repos.at(arg_repo), requestedVersions);
+  }
+  // use the default
+  return update(updater, SensorUpdater::REPOS::REPO_DEV, requestedVersions);
 }
 
-bool cmdUpdate16448(SensorUpdater &updater)
-{
-  return update(updater, SensorUpdater::REPOS::REPO_16448_RELEASE);
-}
-
-bool cmdUpdateDevelop(SensorUpdater &updater)
-{
-  return update(updater, SensorUpdater::REPOS::REPO_DEV);
-}
-
-bool cmdUpdate16488Develop(SensorUpdater &updater)
-{
-  return update(updater, SensorUpdater::REPOS::REPO_16488_DEV);
-}
-
-bool cmdUpdate16448Develop(SensorUpdater &updater)
-{
-  return update(updater, SensorUpdater::REPOS::REPO_16448_DEV);
-}
-
-bool cmdConvertCalibration(SensorUpdater &updater)
+bool cmdConvertCalibration(SensorUpdater &updater, std::vector<std::string> &args)
 {
   return updater.convertCalibration();
 }
 
-bool cmdClean(SensorUpdater &updater)
+bool cmdClean(SensorUpdater &updater, std::vector<std::string> &args)
 {
   return updater.sensorClean();
 }
 
-bool cmdVersion(SensorUpdater &updater)
+bool cmdVersion(SensorUpdater &updater, std::vector<std::string> &args)
 {
   return updater.printVersionsInstalled();
 }
 
-bool cmdReboot(SensorUpdater &updater)
+bool cmdReboot(SensorUpdater &updater, std::vector<std::string> &args)
 {
   return updater.sensorReboot();
 }
@@ -136,19 +233,15 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   // command arguments
-  typedef bool (*commandFunction)(SensorUpdater&); // function pointer type
+  typedef bool (*commandFunction)(SensorUpdater&, std::vector<std::string>&); // function pointer type
   std::map<std::string, commandFunction> argCmds =
   {
       {"update", cmdUpdate},
-      {"update-16448", cmdUpdate16448},
-      {"update-16488", cmdUpdate16488},
       {"update-devel", cmdUpdateDevelop},
-      {"update-16448-devel", cmdUpdate16448Develop},
-      {"update-16488-devel", cmdUpdate16488Develop},
       {"convert-calibration", cmdConvertCalibration},
       {"clean", cmdClean},
       {"reboot", cmdReboot},
-      {"version", cmdVersion},
+      {"version", cmdVersion}
   };
 
   //parse args
@@ -160,18 +253,12 @@ int main(int argc, char** argv)
   std::string hostname,
               command;
 
-  if(args.size() == 2)
+  if(args.size() >= 2)
   {
     //args <IP> <COMMAND>
     hostname = args[0];
     command = args[1];
-  }
-  else if (args.size() == 1)
-  {
-    //args <COMMAND>, use default hostname
-    std::cout << "Sensor IP address not specified; using default (10.0.0.1)\n\n";
-    hostname = std::string("10.0.0.1");
-    command = args[0];
+    args.erase(args.begin(),args.begin()+2);
   }
   else
   {
@@ -193,7 +280,7 @@ int main(int argc, char** argv)
   SensorUpdater updater(hostname);
 
   // run the command
-  success = argCmds[command](updater);
+  success = argCmds[command](updater, args);
 
   return success;
 }
