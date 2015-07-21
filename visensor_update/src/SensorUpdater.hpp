@@ -38,6 +38,8 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 
 // include from libvisensor
 #include "communication_layers/ssh_connections.hpp"
