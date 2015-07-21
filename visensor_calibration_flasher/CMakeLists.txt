@@ -15,7 +15,7 @@ catkin_package(
   INCLUDE_DIRS ${catkin_INCLUDE_DIRS}
   CATKIN_DEPENDS
   roscpp 
-  LIBRARIES libvisensor
+  libvisensor
 )
 
 add_executable(visensor_calibration_flasher src/visensor_calibration_flasher.cpp )
