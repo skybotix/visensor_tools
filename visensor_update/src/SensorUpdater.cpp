@@ -795,7 +795,7 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
 
 bool SensorUpdater::convertCalibration() {
   if (!is_ssh_initialized_){
-    std::cout << "ssh is not initialize" << std::endl;
+    std::cout << "ssh is not initialized" << std::endl;
     return false;
   }
   int sensorID;
