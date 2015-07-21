@@ -127,7 +127,8 @@ class SensorUpdater {
 
   typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry* package, const std::string& prefix); // function pointer type
   typedef std::map<std::string, parseFunction> parse_function_map;
-  SensorUpdater(const std::string &hostname);
+
+  SensorUpdater(const std::string& hostname);
   virtual ~SensorUpdater();
 
   /* repo functions */
@@ -138,7 +139,7 @@ class SensorUpdater {
   bool printVersionsInstalled(void);
   bool printVersionsRepo(const REPOS& repo);
 
-  bool getUpdateList(SensorUpdater::VersionList* outList, const REPOS& repo);
+  bool getUpdateList(SensorUpdater::VersionList* outList, const VersionList &packageVersionList, const REPOS &repo);
 
   /* package functions */
   bool downloadPackagesToPath(const SensorUpdater::VersionList& packageList, const std::string& localPath);
@@ -161,8 +162,9 @@ class SensorUpdater {
   bool sensorSetMountRW(bool RW);
 
   /* high level update functions */
-  bool sensorUpdate(REPOS& repo);
+  bool sensorUpdate(REPOS &repo, const VersionList& requestedVersionList);
 
+  bool checkRepo(REPOS &repo);
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
@@ -198,8 +200,8 @@ static const std::map< SensorUpdater::REPOS, std::string> REPOS_PATH = {
 /* which packages do we want to install, if we do a sensor update */
 static const SensorUpdater::parse_function_map possible_pkgs_ {
   {"visensor-fpga-bitstream", &SensorUpdater::parseVersionFpgaBitstream},
-  {"visensor-linux-embedded", &SensorUpdater::parseVersionDefault},
-  {"visensor-kernel-modules", &SensorUpdater::parseVersionDefault}
+  {"visensor-kernel-modules", &SensorUpdater::parseVersionDefault},
+  {"visensor-linux-embedded", &SensorUpdater::parseVersionDefault}
 };
 
 static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> supported_imu_ {
