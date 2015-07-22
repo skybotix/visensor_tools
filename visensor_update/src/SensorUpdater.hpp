@@ -43,6 +43,7 @@
 
 // include from libvisensor
 #include "communication_layers/SshConnections.hpp"
+#include "config/visensor_configuration.hpp"
 #include "networking/file_transfer.hpp"
 
 class SensorUpdater {
@@ -68,6 +69,7 @@ class SensorUpdater {
     {
       UNKNOWN,
       NORMAL,
+      MULTI_CAM_8,
       FLIR
     };
 
@@ -151,6 +153,7 @@ class SensorUpdater {
 
   /* calibration functions */
   bool convertCalibration();
+  bool checkConfiguration(visensor::ViSensorConfiguration::Ptr& config_server);
   std::vector<visensor::ViCameraCalibration>  parseXmlCameraCalibration(std::string xml_filename);
   bool checkCalibrationConvertion(VersionList old_list, VersionList new_list);
   bool loadXmlCameraCalibrationFile(std::string local_calibration_filename);
@@ -229,6 +232,7 @@ static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> sup
 
 static const std::map<std::string, SensorUpdater::SUPPORTED_FPGA_CONFIGS> supported_fpga_configs_ {
   { "a",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::NORMAL},
-  { "c",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::FLIR} };
+  { "c",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::FLIR},
+  { "e",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::MULTI_CAM_8} };
 
 #endif /* SENSORUPDATER_HPP_ */
