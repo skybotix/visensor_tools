@@ -805,8 +805,8 @@ bool SensorUpdater::checkConfiguration(visensor::ViSensorConfiguration::Ptr& con
     std::cout << std::endl << "The new configuration requested the Vi-Sensor ID." << std::endl;
     while ((std::cout << "Sensor ID (integer): ") && !(std::cin >> sensorID)) {
       std::cin.clear();
-      std::cin.ignore(std::numeric_limits<std::streamsize>::max(),' ');
-      std::cout << "Invalid input; please re-enter.\n";
+      std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+      std::cout << "Invalid input; please re-enter." << std::endl;
     }
     try {
       config_server->setViSensorId(sensorID);
