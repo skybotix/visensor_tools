@@ -52,23 +52,11 @@ bool WebClient::getFileToFile(const std::string &ftppath, const std::string &loc
     try
     {
       dstFile.open( localpath.c_str() );
-      if (!dstFile) {
-        perror ("[ERROR]:  Could not open local file! Reason was");
-        return false;
-      }
-      if (!dstFile.is_open()) {
-        perror ("[ERROR]:  Could not open local file! Reason was");
-        return false;
-      }
       dstFile << outputBuffer;
     }
     catch (std::ofstream::failure e)
     {
       std::cout << "[ERROR]: Could not save update package!\n";
-
-      if (dstFile.is_open()) {
-        dstFile.close();
-      }
       return false;
     }
 

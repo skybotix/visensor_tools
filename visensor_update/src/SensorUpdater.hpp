@@ -128,17 +128,14 @@ class SensorUpdater {
   typedef bool (SensorUpdater::*parseFunction)(SensorUpdater::VersionEntry* package, const std::string& prefix); // function pointer type
   typedef std::map<std::string, parseFunction> parse_function_map;
 
-  SensorUpdater();
+  SensorUpdater(const std::string& hostname);
   virtual ~SensorUpdater();
-
-  void connect(const std::string &target_ip);
 
   /* repo functions */
   bool getVersionInstalled(VersionList* outPackageList);
   bool parseVersionDefault(VersionEntry* package, const std::string &prefix);
   bool parseVersionFpgaBitstream(VersionEntry* package, const std::string &prefix);
   bool getVersionsOnServer(SensorUpdater::VersionList* outPackageList, const REPOS& repo);
-  bool getVersionsFromLocalPath(VersionList* outPackageList, std::string path);
   bool printVersionsInstalled(void);
   bool printVersionsRepo(const REPOS& repo);
 
@@ -167,19 +164,16 @@ class SensorUpdater {
   /* high level update functions */
   bool sensorUpdate(REPOS &repo, const VersionList& requestedVersionList);
 
-  bool sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList);
-  bool sensorUploadFrom(const std::string path);
   bool checkRepo(REPOS &repo);
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
-  bool is_ssh_initialized_; ///< check if updater is connected to the sensor
 
   /* sensor ssh login configuration */
   const std::string sshUsername() const {
       return "root";
   }
-  const std::string servername() const {
+  const std::string hostname() const {
       return "http://skybotix.com/downloads/vi-firmware";
   }
 
@@ -191,9 +185,6 @@ class SensorUpdater {
   /*standard prefix for debian package filenames */
   const std::string prefix() const {
       return "visensor";
-  }
-  const std::string remotePath() const {
-    return "/tmp/";
   }
 };
 
