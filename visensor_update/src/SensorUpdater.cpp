@@ -40,7 +40,6 @@
 #include <boost/tokenizer.hpp>
 #include <boost/regex.hpp>
 
-#include "config/visensor_configuration.hpp"
 
 #include "SensorUpdater.hpp"
 
@@ -208,6 +207,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry* package, const std::
     }
     catch (const std::exception& ex) {
       std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
+      return false;
     }
   }
   else {
@@ -231,6 +231,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry* package, const std::
         }
         catch (const std::exception& ex) {
           std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
+          return false;
         }
       }
       else {
@@ -644,15 +645,13 @@ bool SensorUpdater::loadXmlCameraCalibrationFile(const std::string& local_calibr
 {
   std::string remote_calibration_filename = std::string("/calibration.xml");
 
-    if (!is_ssh_initialized_) {
-      std::cout << "sensor updater is not connected to any sensor\n";
-      return false;
-    }
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
 
-    // transfer calibration file from the sensor
+  // transfer calibration file from the sensor
   if (!pSsh_->getFile(remote_calibration_filename, local_calibration_filename)) {
-    std::cout << "failed.\n";
-    std::cout << "[ERROR]: Could not download calibration file from the sensor!\n";
     return false;
   }
   return true;
@@ -744,17 +743,17 @@ bool SensorUpdater::convertCalibration()
     std::cout << "ssh is not initialized" << std::endl;
     return false;
   }
-  int sensorID;
+  visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<visensor::ViSensorConfiguration>(pFile_transfer_);
 
-  visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<
-      visensor::ViSensorConfiguration>(pFile_transfer_);
-  std::cout << "Load old format ... ";
+  std::cout << "Convert calibration to new format: ";
+
+  std::cout << "Try to load old config... ";
   std::string tmp_calibration_filename("/tmp/calibration.xml");
   if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
-    std::cout << "failed" << std::endl;
-    std::cout << "no calibration file was found, assume that the sensor is not yet calibrated"
-              << std::endl;
-    return true;
+    std::cout << "failed.\n" << std::endl;
+    std::cout << "no calibration file was found, assume that the sensor is not yet calibrate" << std::endl;
+    std::cout << std::endl;
+    return checkConfiguration(config_server);
   }
   std::cout << "done." << std::endl;
 
@@ -774,48 +773,51 @@ bool SensorUpdater::convertCalibration()
   }
 
   std::cout << "Convert calibration to new format ... ";
-  std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(
-      tmp_calibration_filename);
+  std::vector<visensor::ViCameraCalibration> calibration_list =
+      parseXmlCameraCalibration(tmp_calibration_filename);
   if (calibration_list.size() == 0) {
     std::cout << "failed\n";
     std::cout << "no calibrations were found" << std::endl;
-    exit(1);
+    checkConfiguration(config_server);
+    return false;
   }
   try {
     for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();
         it != calibration_list.end(); ++it) {
-      config_server->cleanCameraCalibration(static_cast<visensor::SensorId::SensorId>(it->cam_id_),
-                                            it->slot_id_, it->is_flipped_,
-                                            visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
-                                            visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
-
       config_server->setCameraCalibration(*it);
     }
     config_server->saveConfig();
   } catch (visensor::exceptions const &ex) {
     std::cout << "failed" << std::endl << "Setting of the new calibration failed!" << std::endl;
     std::cout << "Exception was: " << ex.what() << std::endl;
-    exit(1);
+    checkConfiguration(config_server);
+    return false;
   }
   std::cout << "done." << std::endl;
 
+  return checkConfiguration(config_server);
+}
 
-  std::cout << "The new configuration requested the Vi-Sensor ID." << std::endl;
-  while ((std::cout << "Sensor ID (integer): ") && !(std::cin >> sensorID)) {
-    std::cin.clear();
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),' ');
-    std::cout << "Invalid input; please re-enter.\n";
+bool SensorUpdater::checkConfiguration(visensor::ViSensorConfiguration::Ptr& config_server) {
+  if ( (!config_server->isValid()) || (config_server->getViSensorId() < 0) ) {
+    int sensorID;
+    std::cout << std::endl << "The new configuration requested the Vi-Sensor ID." << std::endl;
+    while ((std::cout << "Sensor ID (integer): ") && !(std::cin >> sensorID)) {
+      std::cin.clear();
+      std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+      std::cout << "Invalid input; please re-enter." << std::endl;
+    }
+    try {
+      config_server->setViSensorId(sensorID);
+      config_server->saveConfig();
+    }
+    catch (visensor::exceptions const &ex) {
+      std::cout << "Setting of sensor ID failed!" << std::endl;
+      std::cout <<  "Exception was: " << ex.what() << std::endl;
+      return false;
+    }
+    std::cout << std::endl;
   }
-  try {
-    config_server->setViSensorId(sensorID);
-    config_server->saveConfig();
-  }
-  catch (visensor::exceptions const &ex) {
-    std::cout << "Setting of sensor ID failed!" << std::endl;
-    std::cout <<  "Exception was: " << ex.what() << std::endl;
-    return false;
-  }
-  std::cout << std::endl;
   return true;
 }
 
@@ -827,14 +829,9 @@ bool SensorUpdater::checkCalibrationConvertion(const VersionList& old_list,
   //check if the calibration need to be converted
   if (old_list.size() == 0) {
     std::cout << "Try to copy possible available calibration ... ";
-    if (loadXmlCameraCalibrationFile("/tmp/calibration.xml")) {
-      std::cout << "done." << std::endl;
-      if (!convertCalibration()) {
-        std::cerr << "Could not convert calibration to new format" << std::endl;
-        return false;
-      }
-    } else {
-      std::cout << "No calibration file found, nothing to convert" << std::endl;
+    if (!convertCalibration()) {
+      std::cerr << "Could not convert calibration to new format" << std::endl;
+      return false;
     }
   } else {
     size_t i;
