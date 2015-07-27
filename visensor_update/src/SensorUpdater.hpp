@@ -68,7 +68,7 @@ class SensorUpdater {
     {
       UNKNOWN,
       NORMAL,
-      MULTI_CAM_8,
+      P0_8_CAM_SYSTEM,
       FLIR
     };
 
@@ -221,6 +221,6 @@ static const std::map<const std::string, const SensorUpdater::SUPPORTED_IMU> sup
 static const std::map<std::string, SensorUpdater::SUPPORTED_FPGA_CONFIGS> supported_fpga_configs_ {
   { "a",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::NORMAL },
   { "c",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::FLIR },
-  { "e",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::MULTI_CAM_8} };
+  { "e",  SensorUpdater::SUPPORTED_FPGA_CONFIGS::P0_8_CAM_SYSTEM} };
 
 #endif /* SENSORUPDATER_HPP_ */
