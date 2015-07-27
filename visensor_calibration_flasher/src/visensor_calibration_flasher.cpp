@@ -61,37 +61,41 @@ void CalibrationFlasher::printAllCameraCalibration()
 }
 void CalibrationFlasher::printCameraCalibration(const visensor::ViCameraCalibration& config)
 {
-  std::cout << "Calibration of camera " << config.cam_id_ << " is:\n";
-  std::cout << "Projection:\n";
-  std::cout << "\tModel:\n\t\t";
+  std::cout << std::endl << "Calibration of camera " << config.cam_id_ << " is:\n";
+  std::cout << "Slot ID:\t\t" << config.slot_id_ << std::endl;
+  std::cout << std::endl;
+  std::cout << "flip_camera:\t\t" << config.is_flipped_ << std::endl;
+  std::cout << std::endl;
+  std::cout << "Projection Model:\n";
+  std::cout << "\tModel:\t\t";
   std::cout << config.projection_model_->type_name_ << std::endl;
-  std::cout << "\tCoefficient:\n\t\t";
+  std::cout << "\tCoefficient:\t";
   std::vector<double> coefficients = config.projection_model_->getCoefficients();
   for (unsigned int i = 0; i < coefficients.size(); ++i) {
     std::cout << coefficients[i] << " ";
   }
-  std::cout << "\nLens Coefficient:\n";
-  std::cout << "\tModel:\n\t\t";
+  std::cout << std::endl << std::endl;
+  std::cout << "Lens Model:\n";
+  std::cout << "\tModel:\t\t";
   std::cout << config.lens_model_->type_name_ << std::endl;
-  std::cout << "\tCoefficient: \n\t\t";
+  std::cout << "\tCoefficient:\t";
   coefficients = config.lens_model_->getCoefficients();
   for (unsigned int i = 0; i < coefficients.size(); ++i) {
     std::cout << coefficients[i] << " ";
   }
-  std::cout << "\nR:\n";
+  std::cout << std::endl << std::endl;
+  std::cout << "R:";
   for (unsigned int i = 0; i < config.R_.size() / 3; ++i) {
-    std::cout << "\t" << config.R_[i] << "\t" << config.R_[i + 3] << "\t" << config.R_[i + 6]
+    std::cout << "\t\t\t" << config.R_[i] << "\t" << config.R_[i + 3] << "\t" << config.R_[i + 6]
               << "\n";
   }
-  std::cout << "T:\n\t";
+  std::cout << "T:\t\t\t";
   for (unsigned int i = 0; i < config.t_.size(); ++i) {
     std::cout << config.t_[i] << "\t";
   }
-
-  std::cout << "\nResolution is:\n\t" << config.resolution_[0] << ", " << config.resolution_[1]
+  std::cout << std::endl << std::endl;
+  std::cout << "Resolution is:\t\t" << config.resolution_[0] << ", " << config.resolution_[1]
             << std::endl;
-  std::cout << "flip_camera:\n\t" << config.is_flipped_ << std::endl;
-  std::cout << std::endl;
 }
 
 bool CalibrationFlasher::addCalibration(const YAML::Node& config, const int slot_id)
