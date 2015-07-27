@@ -645,17 +645,16 @@ bool SensorUpdater::loadXmlCameraCalibrationFile(const std::string& local_calibr
 {
   std::string remote_calibration_filename = std::string("/calibration.xml");
 
-    if (!is_ssh_initialized_) {
-      std::cout << "sensor updater is not connected to any sensor\n";
-      return false;
-    }
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
 
-    // transfer calibration file from the sensor
-    if(!pSsh_->getFile(remote_calibration_filename, local_calibration_filename))
-    {
-      return false;
-    }
-    return true;
+  // transfer calibration file from the sensor
+  if (!pSsh_->getFile(remote_calibration_filename, local_calibration_filename)) {
+    return false;
+  }
+  return true;
 }
 
 /**
