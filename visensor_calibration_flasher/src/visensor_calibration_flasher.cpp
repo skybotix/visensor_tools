@@ -153,7 +153,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
   assert(cam_params["T_cam_imu"]);
 
   if (cam_params["flip_camera"]) {
-    camera_calibration.is_flipped_ = cam_params["flip_camera"].as<int>();
+    camera_calibration.is_flipped_ = cam_params["flip_camera"].as<bool>();
   } else {
     camera_calibration.is_flipped_ = true;
   }
