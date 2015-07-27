@@ -772,13 +772,15 @@ bool SensorUpdater::convertCalibration()
     std::cout << "Exception was: " << ex.what() << std::endl;
   }
 
+
   std::cout << "Convert calibration to new format ... ";
   std::vector<visensor::ViCameraCalibration> calibration_list =
       parseXmlCameraCalibration(tmp_calibration_filename);
   if (calibration_list.size() == 0) {
     std::cout << "failed\n";
     std::cout << "no calibrations were found" << std::endl;
-    exit(1);
+    checkConfiguration(config_server);
+    return false;
   }
   try {
     for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();
@@ -789,11 +791,12 @@ bool SensorUpdater::convertCalibration()
   } catch (visensor::exceptions const &ex) {
     std::cout << "failed" << std::endl << "Setting of the new calibration failed!" << std::endl;
     std::cout << "Exception was: " << ex.what() << std::endl;
-    exit(1);
+    checkConfiguration(config_server);
+    return false;
   }
   std::cout << "done." << std::endl;
 
-  return true;
+  return checkConfiguration(config_server);
 }
 
 bool SensorUpdater::checkConfiguration(visensor::ViSensorConfiguration::Ptr& config_server) {
