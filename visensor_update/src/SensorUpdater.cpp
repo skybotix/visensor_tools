@@ -772,7 +772,6 @@ bool SensorUpdater::convertCalibration()
     std::cout << "Exception was: " << ex.what() << std::endl;
   }
 
-
   std::cout << "Convert calibration to new format ... ";
   std::vector<visensor::ViCameraCalibration> calibration_list =
       parseXmlCameraCalibration(tmp_calibration_filename);
