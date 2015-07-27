@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -31,14 +31,15 @@
  */
 
 #include <iostream>
-#include <vector>
 #include <map>
+#include <vector>
 
 #include <boost/regex.hpp>
 #include <ros/ros.h>
 #include <ros/package.h>
 
 #include "SensorUpdater.hpp"
+
 void printArgs(void)
 {
     std::cout << "visensor_update <SENSOR_IP> <COMMAND> <CMD_ARGS>" << std::endl;
@@ -48,6 +49,7 @@ void printArgs(void)
     std::cout << "     update               updates the sensor to the newest software on the online repo, check for the correct IMU first" << std::endl;
     std::cout << "     update <imu-type>    updates the sensor with the specified IMU version to the newest software on the online repo.\n"
                  "                          The imu-type can be 16448 or 16488" << std::endl;
+    std::cout << "     convert-calibration  converts the calibration format from libvisensor version 1.2.X to 2.0.X"  << std::endl;
     std::cout << "     update <fpga-version> <kernel-version> <embedded-version>\n"
                  "                          updates the sensor to the given version from the online repo, check for the correct IMU first" << std::endl;
     std::cout << "     update <imu-type> <fpga-version> <kernel-version> <embedded-version>\n"
@@ -376,7 +378,6 @@ bool cmdReboot(SensorUpdater& updater, std::string& target_name, std::vector<std
   return updater.sensorReboot();
 }
 
-
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "visensor_update");
@@ -401,8 +402,6 @@ int main(int argc, char** argv)
   std::vector<std::string> args;
   for(int i=1; i<argc; i++)
     args.push_back( std::string(argv[i]) );
-
-  /* find all sensors using auto discovery */
 
   //make IP optional
   std::string targetname,

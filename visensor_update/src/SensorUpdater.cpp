@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Skybotix AG, Switzerland (info@skybotix.com)
+ * Copyright (c) 2015, Skybotix AG, Switzerland (info@skybotix.com)
  *
  * All rights reserved.
  *
@@ -30,8 +30,9 @@
  *
  */
 
-#include <iostream>
 #include <dirent.h>
+#include <iostream>
+#include <map>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
@@ -46,106 +47,98 @@ SensorUpdater::SensorUpdater() :
   is_ssh_initialized_(false) {
 }
 
-
 SensorUpdater::~SensorUpdater()
 {
 }
 
 void SensorUpdater::connect(const std::string &target_ip) {
-  pSsh_ =  boost::make_shared<visensor::SshConnection>(target_ip, sshUsername(), sshPassword());
+  pSsh_ =  boost::make_shared<visensor::SshConnection>();
+  pSsh_->sshConnect(target_ip, sshUsername(), sshPassword());
   pFile_transfer_ =  boost::make_shared<visensor::FileTransfer>(pSsh_);
   is_ssh_initialized_ = true;
 }
 
-//function returns a vector of pairs with (package_name, version)
-//for all packages that start with the given packagename prefix
-bool SensorUpdater::getVersionInstalled(VersionList &outPackageList)
+/**
+ * function returns a vector of pairs with (package_name, version)
+ * for all packages that start with the given packagename prefix
+ */
+bool SensorUpdater::getVersionInstalled(VersionList* outPackageList)
 {
   //clear the output VersionList
-  outPackageList.clear();
-
+  outPackageList->clear();
   for (parse_function_map::const_iterator iter =  possible_pkgs_.begin(); iter != possible_pkgs_.end(); ++iter) {
-
     VersionEntry package;
-    if (!( (this->*(iter->second))(package, iter->first) )) {
+    if (!( (this->*(iter->second))(&package, iter->first) )) {
       std::cout << "Failed to parse the version of the package " << iter->first << std::endl;
-//      return false;
     }
-    outPackageList.push_back(package);
+    outPackageList->push_back(package);
   }
   return true;
 }
 
 
-bool SensorUpdater::parseVersionDefault(VersionEntry& package, const std::string &prefix)  {
-  // run command
-  int exitcode=127;
+bool SensorUpdater::parseVersionDefault(VersionEntry* outPackage, const std::string &prefix)
+{
+  int exitcode = 127;
   std::string output;
   if (!is_ssh_initialized_) {
     std::cout << "sensor updater is not connected to any sensor\n";
     return false;
   }
 
-  pSsh_->runCommand( std::string("dpkg -l | grep ") + prefix,
-                     output,
-                     exitcode );
+  pSsh_->runCommand(std::string("dpkg -l | grep ") + prefix, &output, exitcode);
 
   if (exitcode != 0) {
-    std::cout << "failed to run " <<  std::string("dpkg -l | grep ") + prefix << std::endl;
+    std::cout << "failed to run " << std::string("dpkg -l | grep ") + prefix << std::endl;
     return false;
   }
+
   //typical line to parse:
-  //  ii  vim                                         2:7.3.547-4ubuntu1.1                       amd64        Vi IMproved - enhanced vi editor
-  typedef boost::tokenizer<boost::char_separator<char> >  tokenizer;
+  //  ii  vim   :7.3.547-4ubuntu1.1  amd64    Vi IMproved - enhanced vi editor
+  typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
   boost::char_separator<char> sep("\n");
   tokenizer tokens(output, sep);
-
 
   //divide by new lines
   for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter) {
     //get the filename
-     std::string line = *tok_iter;
+    std::string line = *tok_iter;
 
-     //parse package file names
-     //typical line: visensor-linux-1.0.1-Linux.deb
-     //design and check on: http://regexpal.com/
-
-     //exract version number
-     boost::regex expression("[\\s\\t]*[A-Za-z0-9]*[\\s\\t]+([A-Za-z0-9\\-]+)[\\s\\t]+"
-         "([0-9]+)\\."
-         "([0-9]+)\\."
-         "([0-9]+)[\\s\\t]+"
-         "([A-Za-z0-9-]+)[A-Za-z0-9\\-\\.\\s.()]*");
-
-     boost::cmatch what;
-
+    //parse package file names
+    //typical line: visensor-linux-1.0.1-Linux.deb
+    //design and check on: http://regexpal.com/
+    //exract version number
+    boost::regex expression("[\\s\\t]*[A-Za-z0-9]*[\\s\\t]+([A-Za-z0-9\\-]+)[\\s\\t]+"
+                            "([0-9]+)\\."
+                            "([0-9]+)\\."
+                            "([0-9]+)[\\s\\t]+"
+                            "([A-Za-z0-9-]+)[A-Za-z0-9\\-\\.\\s.()]*");
+    boost::cmatch what;
      // find matches
-     if( regex_match(line.c_str(), what, expression) )
-     {
-       // what[0] contains whole filename
-       // what[1] contains the package name
-       // what[2] contains the major version number
-       // what[3] contains the minor version number
-       // what[4] contains the patch version number
-       // what[5] contains the arch
-       package.package_name = what[1];
-       package.version_major = boost::lexical_cast<unsigned int>( what[2] );
-       package.version_minor = boost::lexical_cast<unsigned int>( what[3] );
-       package.version_patch = boost::lexical_cast<unsigned int>( what[4] );
+    if (regex_match(line.c_str(), what, expression)) {
+      // what[0] contains whole filename
+      // what[1] contains the package name
+      // what[2] contains the major version number
+      // what[3] contains the minor version number
+      // what[4] contains the patch version number
+      // what[5] contains the arch
+      outPackage->package_name = what[1];
+      outPackage->version_major = boost::lexical_cast<unsigned int>(what[2]);
+      outPackage->version_minor = boost::lexical_cast<unsigned int>(what[3]);
+      outPackage->version_patch = boost::lexical_cast<unsigned int>(what[4]);
        // assume that there is only one package
-       return true;
-     }
-     else {
-       //regex match failed (file is not a valid package name...)
-       std::cout << "regex failed: " << line.c_str() << "\n";
-     }
+      return true;
+    } else {
+      //regex match failed (file is not a valid package name...)
+      std::cout << "regex failed: " << line.c_str() << "\n";
+    }
   }
 
   // return true if exit-code = 0
   return false;
 }
 
-bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::string &prefix) {
+bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry* package, const std::string &prefix) {
   std::string output;
   int exitcode=127;
 
@@ -155,9 +148,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
   }
 
   // run command
-  pSsh_->runCommand( std::string("/home/root/fpga/fpga_version.bash"),
-                     output,
-                     exitcode );
+  pSsh_->runCommand( std::string("/home/root/fpga/fpga_version.bash"), &output, exitcode );
 
 
   if (exitcode != 0) {
@@ -183,9 +174,7 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
   boost::regex version_expression("[\\s\\t]*[A-Za-z:]*[\\s\\t]+([0-9]+)\\."
       "([0-9]+)\\."
       "([0-9]+)[\\s\\t]*[A-Za-z0-9\\-\\.\\s.()]*");
-
   boost::cmatch what;
-
   // find matches of the version
   if( regex_match(version_line.c_str(), what, version_expression) )
   {
@@ -193,10 +182,10 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
    // what[1] contains the major version number
    // what[2] contains the minor version number
    // what[3] contains the patch version number
-   package.package_name = "visensor-fpga-bitstream";
-   package.version_major = boost::lexical_cast<unsigned int>( what[1] );
-   package.version_minor = boost::lexical_cast<unsigned int>( what[2] );
-   package.version_patch = boost::lexical_cast<unsigned int>( what[3] );
+   package->package_name = "visensor-fpga-bitstream";
+   package->version_major = boost::lexical_cast<unsigned int>( what[1] );
+   package->version_minor = boost::lexical_cast<unsigned int>( what[2] );
+   package->version_patch = boost::lexical_cast<unsigned int>( what[3] );
   }
   else {
    //regex match failed (file is not a valid package name...)
@@ -213,8 +202,8 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
    // what_type[1] contains the sensor type: a => normal configuration, c => flir configuration
    // what_type[2] contains the IMU type: A48 or A88
     try {
-      package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
-      package.imu_type = supported_imu_.at(boost::lexical_cast<std::string>( what_type[2] ));
+      package->sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
+      package->imu_type = supported_imu_.at(boost::lexical_cast<std::string>( what_type[2] ));
     }
     catch (const std::exception& ex) {
       std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
@@ -224,9 +213,9 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
   else {
     // check if version was for the ADIS 16488. There is only one version for the ADIS 16488 in the old format
     VersionEntry fpga_version_adis_16488(1,0,22);
-    if ( package == fpga_version_adis_16488 ) {
-      package.sensor_type = SUPPORTED_FPGA_CONFIGS::NORMAL;
-      package.imu_type = SUPPORTED_IMU::ADIS_16488;
+    if ( *package == fpga_version_adis_16488 ) {
+      package->sensor_type = SUPPORTED_FPGA_CONFIGS::NORMAL;
+      package->imu_type = SUPPORTED_IMU::ADIS_16488;
     }
     else {
       // find matches for the sensor type. Try old format version_<SensorType>
@@ -237,8 +226,8 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
         // what_type[0] contains whole filename
         // what_type[1] contains the sensor type: a => normal configuration, c => flir configuration
         try {
-          package.sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
-          package.imu_type = SUPPORTED_IMU::ADIS_16448;
+          package->sensor_type = supported_fpga_configs_.at(boost::lexical_cast<std::string>( what_type[1] ));
+          package->imu_type = SUPPORTED_IMU::ADIS_16448;
         }
         catch (const std::exception& ex) {
           std::cout << "failed to parse FPGA types: " << ex.what() << std::endl;
@@ -255,9 +244,9 @@ bool SensorUpdater::parseVersionFpgaBitstream(VersionEntry& package, const std::
   return true;
 }
 
-bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo) {
+bool SensorUpdater::getVersionsOnServer(VersionList* outPackageList, const REPOS& repo) {
   // clear the output list
-  outPackageList.clear();
+  outPackageList->clear();
 
   // query the ftp server
   std::string filelist;
@@ -268,18 +257,16 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo)
 
   bool success = web_client.dirList(repo_ftppath, filelist);
 
-  if(!success)
+  if (!success)
     return false;
 
   //extract filenames from filelist
-  typedef boost::tokenizer<boost::char_separator<char> >  tokenizer;
+  typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
   boost::char_separator<char> sep(";");
   tokenizer tokensL(filelist, sep);
 
   //loop through all filenames
-  for (tokenizer::iterator tokL_iter = tokensL.begin(); tokL_iter != tokensL.end(); ++tokL_iter)
-  {
-
+  for (tokenizer::iterator tokL_iter = tokensL.begin(); tokL_iter != tokensL.end(); ++tokL_iter) {
     //get the filename
     std::string filename = *tokL_iter;
 
@@ -294,8 +281,7 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo)
     boost::cmatch what;
 
     // find matches
-    if( regex_match(filename.c_str(), what, version_expression) )
-    {
+    if( regex_match(filename.c_str(), what, version_expression) ) {
       // what[0] contains whole filename
       // what[1] contains the package name
       // what[2] contains the major version number
@@ -305,16 +291,15 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo)
 
       VersionEntry package;
       package.package_name = what[1];
-      package.version_major = boost::lexical_cast<unsigned int>( what[2] );
-      package.version_minor = boost::lexical_cast<unsigned int>( what[3] );
-      package.version_patch = boost::lexical_cast<unsigned int>( what[4] );
+      package.version_major = boost::lexical_cast<unsigned int>(what[2]);
+      package.version_minor = boost::lexical_cast<unsigned int>(what[3]);
+      package.version_patch = boost::lexical_cast<unsigned int>(what[4]);
 
       // store the relative ftp path (if we want to downlaod it later...)
       package.path = REPOS_PATH.at( repo ) + "/" + filename;
 
       // store the packages
-      outPackageList.push_back( package );
-
+      outPackageList->push_back(package);
     } else {
       //regex match failed (file is not a valid package name...)
       std::cout << "regex failed: " << filename.c_str() << "\n";
@@ -324,9 +309,9 @@ bool SensorUpdater::getVersionsOnServer(VersionList &outPackageList, REPOS repo)
   //now remove old version (only the newest version of each package should remain in the list
   return true;
 }
-bool SensorUpdater::getVersionsFromLocalPath(VersionList &outPackageList, std::string path) {
+bool SensorUpdater::getVersionsFromLocalPath(VersionList* outPackageList, std::string path) {
   // clear the output list
-  outPackageList.clear();
+  outPackageList->clear();
 
   std::string filelist;
 
@@ -340,7 +325,7 @@ bool SensorUpdater::getVersionsFromLocalPath(VersionList &outPackageList, std::s
           VersionEntry package;
           package.package_name = iter->first;
           package.path =  path + "/" + ent->d_name;
-          outPackageList.push_back(package);
+          outPackageList->push_back(package);
         }
       }
     }
@@ -357,72 +342,52 @@ bool SensorUpdater::getVersionsFromLocalPath(VersionList &outPackageList, std::s
 bool SensorUpdater::printVersionsInstalled(void)
 {
   VersionList listSensor;
-  bool success = getVersionInstalled(listSensor);
+  bool success = getVersionInstalled(&listSensor);
 
-  if(!success)
-  {
+  if (!success) {
     std::cout << "Error: could not get installed versions from sensor!\n";
     return false;
   }
 
-  std:: cout << "Name\t\t\t\tVersion\n";
-  std:: cout << "-----------------------------------------\n";
-
-  if( !listSensor.size() )
-  {
+  std::cout << "Name\t\t\t\tVersion\n";
+  std::cout << "-----------------------------------------\n";
+  if (!listSensor.size()) {
     std::cout << "No packages installed!\n";
     return true;
   }
 
-  for(size_t i=0; i<listSensor.size(); i++)
-  {
-    std::cout <<  listSensor[i].package_name << "\t\t"  <<
-                  listSensor[i].version_major <<
-                  "." <<
-                  listSensor[i].version_minor <<
-                  "." <<
-                  listSensor[i].version_patch <<
-                  "\n";
+  for (size_t i = 0; i < listSensor.size(); i++) {
+    std::cout << listSensor[i].package_name << "\t\t" << listSensor[i].version_major << "."
+              << listSensor[i].version_minor << "." << listSensor[i].version_patch << "\n";
   }
-
   std::cout << std::endl;
-
   return true;
 }
 
-bool SensorUpdater::printVersionsRepo(REPOS repo)
+bool SensorUpdater::printVersionsRepo(const REPOS& repo)
 {
   VersionList listFtp;
-  bool success = getVersionsOnServer(listFtp, repo);
+  bool success = getVersionsOnServer(&listFtp, repo);
 
-  if(!success)
-  {
+  if (!success) {
     std::cout << "Error: could not get installed versions from repository!\n";
     return false;
   }
 
-  std:: cout << "Name\t\tVersion\t\tftppath\n";
-
-  for(size_t i=0; i<listFtp.size(); i++)
-  {
-    std::cout <<  listFtp[i].package_name << "\t\t"  <<
-                  listFtp[i].version_major <<
-                  "." <<
-                  listFtp[i].version_minor <<
-                  "." <<
-                  listFtp[i].version_patch << "\t\t"  <<
-                  listFtp[i].path <<
-                  "\n";
+  std::cout << "Name\t\tVersion\t\tftppath\n";
+  for (size_t i = 0; i < listFtp.size(); i++) {
+    std::cout << listFtp[i].package_name << "\t\t" << listFtp[i].version_major << "."
+              << listFtp[i].version_minor << "." << listFtp[i].version_patch << "\t\t"
+              << listFtp[i].path << "\n";
   }
   return true;
 }
-
 
 /* reboot the sensor */
 bool SensorUpdater::sensorReboot(void) const
 {
   std::string output;
-  int exitcode=127;
+  int exitcode = 127;
 
   if (!is_ssh_initialized_) {
     std::cout << "sensor updater is not connected to any sensor\n";
@@ -430,9 +395,7 @@ bool SensorUpdater::sensorReboot(void) const
   }
 
   // run command
-  pSsh_->runCommand( std::string("reboot"),
-                     output,
-                     exitcode );
+  pSsh_->runCommand(std::string("reboot"), &output, exitcode);
 
   std::cout << "Rebooting sensor...\n";
 
@@ -441,11 +404,10 @@ bool SensorUpdater::sensorReboot(void) const
 }
 
 
-/* install a debian package which is on the sensor */
-bool SensorUpdater::sensorInstallDebFile(const std::string &remotefile)
+bool SensorUpdater::sensorInstallDebFile(const std::string& remotefile)
 {
   std::string output;
-  int exitcode=127;
+  int exitcode = 127;
 
   if (!is_ssh_initialized_) {
     std::cout << "sensor updater is not connected to any sensor\n";
@@ -455,14 +417,11 @@ bool SensorUpdater::sensorInstallDebFile(const std::string &remotefile)
   // mount read-write for changes
   bool success = sensorSetMountRW(true);
 
-  if(!success)
+  if (!success)
     return false;
 
   // run command
-  pSsh_->runCommand( std::string("dpkg -i ") + remotefile,
-                     output,
-                     exitcode );
-
+  pSsh_->runCommand(std::string("dpkg -i ") + remotefile, &output, exitcode);
   // mount read-only after changes
   success = sensorSetMountRW(false);
 
@@ -470,12 +429,11 @@ bool SensorUpdater::sensorInstallDebFile(const std::string &remotefile)
   return (exitcode == 0);
 }
 
-
 /* remove the deb package with the name package_name */
-bool SensorUpdater::sensorRemoveDeb(const std::string &package_name)
+bool SensorUpdater::sensorRemoveDeb(const std::string& package_name)
 {
   std::string output;
-  int exitcode=127;
+  int exitcode = 127;
 
   if (!is_ssh_initialized_) {
     std::cout << "sensor updater is not connected to any sensor\n";
@@ -485,14 +443,11 @@ bool SensorUpdater::sensorRemoveDeb(const std::string &package_name)
   // mount read-write for changes
   bool success = sensorSetMountRW(true);
 
-  if(!success)
+  if (!success)
     return false;
 
   // run command
-  pSsh_->runCommand( std::string("dpkg -P ") + package_name,
-                     output,
-                     exitcode );
-
+  pSsh_->runCommand(std::string("dpkg -P ") + package_name, &output, exitcode);
   // mount read-only after changes
   success = sensorSetMountRW(false);
 
@@ -503,9 +458,8 @@ bool SensorUpdater::sensorRemoveDeb(const std::string &package_name)
 //RW: true ==> read-write, RW: false ==> read-only
 bool SensorUpdater::sensorSetMountRW(bool RW)
 {
-
   std::string output;
-  int exitcode=127;
+  int exitcode = 127;
 
   if (!is_ssh_initialized_) {
     std::cout << "sensor updater is not connected to any sensor\n";
@@ -514,19 +468,16 @@ bool SensorUpdater::sensorSetMountRW(bool RW)
 
   //command
   std::string cmd;
-  if(RW)
+  if (RW)
     cmd = "mount -o remount,rw /";
   else
     cmd = "mount -o remount,ro /";
 
   // run command
-  pSsh_->runCommand( cmd,
-                     output,
-                     exitcode );
+  pSsh_->runCommand(cmd, &output, exitcode);
 
   //0 and 255 are success exit codes
-  if( exitcode != 0 && exitcode != 255)
-  {
+  if (exitcode != 0 && exitcode != 255) {
     std::cout << "Error: could not change RW mode on sensor!\n";
     return false;
   }
@@ -535,27 +486,24 @@ bool SensorUpdater::sensorSetMountRW(bool RW)
   return true;
 }
 
-
 /* clean all installed packages on the sensor with the given prefix */
 bool SensorUpdater::sensorClean(void)
 {
   VersionList listSensor;
 
   // get all the installed packages with the given prefix
-  bool success = getVersionInstalled(listSensor);
+  bool success = getVersionInstalled(&listSensor);
 
-  if(!success)
-  {
+  if (!success) {
     std::cout << "Error: could not get installed versions from sensor!\n";
     return false;
   }
 
   // remove package after package
-  for(size_t i=0; i<listSensor.size(); i++)
-  {
+  for (size_t i = 0; i < listSensor.size(); i++) {
     std::cout << "Removing " << listSensor[i].package_name << " from Sensor ... ";
     success = sensorRemoveDeb(listSensor[i].package_name);
-    if(success)
+    if (success)
       std::cout << "done.\n";
     else
       std::cout << "failed!\n";
@@ -565,11 +513,11 @@ bool SensorUpdater::sensorClean(void)
 }
 
 /* get a list of the newest/defined versions from the repo */
-bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packageVersionList, const REPOS &repo)
+bool SensorUpdater::getUpdateList(VersionList* outList, const VersionList &packageVersionList, const REPOS &repo)
 {
   // get the newest version from the repos
   VersionList allPackages;
-  bool success = getVersionsOnServer(allPackages, repo);
+  bool success = getVersionsOnServer(&allPackages, repo);
 
   //extract the newst version of all mandatory packages
   VersionList updatePackages;
@@ -579,7 +527,7 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packa
     // extract all packages which are mandatory to install
     VersionList temp;
 
-    for(size_t j=0; j<allPackages.size(); j++){
+    for(size_t j=0; j<allPackages.size(); j++) {
       if( allPackages[j].package_name == iter->first) {
         if (!packageVersionList.empty()) {
           // check if the version is the requested version
@@ -600,9 +548,9 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packa
     }
 
     // check we found the mandatory package
-    if(temp.size()<1)
-    {
-      std::cout << "[ERROR]: Could not find the required package \"" << iter->first << "\" in the online repository!\n";
+    if (temp.size() < 1) {
+      std::cout << "[ERROR]: Could not find the required package \""
+                << iter->first << "\" in the online repository!\n";
       exit(1);
     }
 
@@ -610,72 +558,29 @@ bool SensorUpdater::getUpdateList(VersionList &outList, const VersionList &packa
     std::sort(temp.begin(), temp.end());
 
     // add the newest version of the mandatory package to the update list
-    updatePackages.push_back( temp.back() );
+    updatePackages.push_back(temp.back());
   }
-  outList = updatePackages;
-
+  *outList = updatePackages;
   return success;
 }
 
 /* download packages defined in packageList from repo to local path */
-bool SensorUpdater::downloadPackagesToPath(VersionList &packageList, const std::string &localPath)
+bool SensorUpdater::downloadPackagesToPath(const VersionList& packageList,
+                                           const std::string& localPath)
 {
   // download and install the needed packages
    WebClient web_client(servername());
 
-   for(size_t i=0; i<packageList.size(); i++)
-   {
-     std::cout << "Downloading " << packageList[i].package_name << " ...  ";
+  for (size_t i = 0; i < packageList.size(); i++) {
+    std::cout << "Downloading " << packageList[i].package_name << " ...  ";
 
      // download
-     std::string pkg_filename = localPath + packageList[i].package_name + std::string(".deb");
-
-     bool ret = web_client.getFileToFile(packageList[i].path, pkg_filename);
-     if(!ret)
-     {
-       std::cout << "failed.\n";
-       std::cout << "[ERROR]: Could not fetch update package from online repository! \n";
-       exit(1);
-     }
-
-     std::cout << "done.\n";
-   }
-   std::cout << std::endl;
-   return true;
-}
-
-/* install packages defined in packageList from local path to sensor*/
-bool SensorUpdater::installPackagesFromPath(VersionList &packageList, const std::string &localPath)
-{
-  if (!is_ssh_initialized_) {
-    std::cout << "sensor updater is not connected to any sensor\n";
-    return false;
-  }
-
-  for(size_t i=0; i<packageList.size(); i++)
-  {
-    std::cout << "Installing " << packageList[i].package_name << " ...  ";
-
-    // download
     std::string pkg_filename = localPath + packageList[i].package_name + std::string(".deb");
-    std::string pkg_remote_filename = remotePath() + packageList[i].package_name + std::string(".deb");
 
-    // transfer file to sensor
-    bool ret = pSsh_->sendFile(pkg_filename, pkg_remote_filename);
-    if(!ret)
-    {
+    bool ret = web_client.getFileToFile(packageList[i].path, pkg_filename);
+    if (!ret) {
       std::cout << "failed.\n";
-      std::cout << "[ERROR]: Could not upload file to sensor!\n";
-      exit(1);
-    }
-
-    // install
-    ret = sensorInstallDebFile(pkg_remote_filename);
-
-    if(!ret)
-    {
-      std::cout << "failed.\n";
-      std::cout << "[ERROR]: Could not install debfile on sensor " << pkg_filename << "\n";
+      std::cout << "[ERROR]: Could not fetch update package from online repository! \n";
       exit(1);
     }
 
@@ -685,23 +590,60 @@ bool SensorUpdater::installPackagesFromPath(VersionList &packageList, const std:
   return true;
 }
 
+/* install packages defined in packageList from local path to sensor*/
+bool SensorUpdater::installPackagesFromPath(const VersionList& packageList,
+                                            const std::string& localPath)
+{
+  if (!is_ssh_initialized_) {
+    std::cout << "sensor updater is not connected to any sensor\n";
+    return false;
+  }
+  for (size_t i = 0; i < packageList.size(); i++) {
+    std::cout << "Installing " << packageList[i].package_name << " ...  ";
 
-bool SensorUpdater::loadPropertyTree(std::string calibration_filename, boost::property_tree::ptree& tree) {
-  try
-  {
-    read_xml(calibration_filename, tree, boost::property_tree::xml_parser::trim_whitespace );
-  } catch(std::exception const&  ex)
-  {
+    // download
+    std::string pkg_filename = localPath + packageList[i].package_name + std::string(".deb");
+    std::string pkg_remote_filename = remotePath() + packageList[i].package_name + std::string(".deb");
+
+    // transfer file to sensor
+    bool ret = pSsh_->sendFile(pkg_filename, pkg_remote_filename);
+    if (!ret) {
+      std::cout << "failed.\n";
+      std::cout << "[ERROR]: Could not upload file to sensor!\n";
+      exit(1);
+    }
+
+    // install
+    ret = sensorInstallDebFile(pkg_remote_filename);
+
+    if (!ret) {
+      std::cout << "failed.\n";
+      std::cout << "[ERROR]: Could not install debfile on sensor " << pkg_filename << "\n";
+      exit(1);
+    }
+    std::cout << "done.\n";
+  }
+  std::cout << std::endl;
+  return true;
+}
+
+bool SensorUpdater::loadPropertyTree(const std::string& calibration_filename,
+                                     boost::property_tree::ptree* tree)
+{
+  try {
+    read_xml(calibration_filename, *tree, boost::property_tree::xml_parser::trim_whitespace);
+  } catch (std::exception const& ex) {
     std::cout << "failed.\n";
     std::cout << "[ERROR]: Could not load the calibration file!\n";
     std::cout << "Exception: " << ex.what() << "\n";
     return false;
   }
-
   return true;
 }
-bool SensorUpdater::loadXmlCameraCalibrationFile(std::string local_calibration_filename) {
-    std::string remote_calibration_filename("/calibration.xml");
+
+bool SensorUpdater::loadXmlCameraCalibrationFile(const std::string& local_calibration_filename)
+{
+  std::string remote_calibration_filename = std::string("/calibration.xml");
 
     if (!is_ssh_initialized_) {
       std::cout << "sensor updater is not connected to any sensor\n";
@@ -725,17 +667,19 @@ bool SensorUpdater::loadXmlCameraCalibrationFile(std::string local_calibration_f
  * @return vector of the saved configurations
  *
  */
-std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibration(std::string xml_filename) {
+std::vector<visensor::ViCameraCalibration> SensorUpdater::parseXmlCameraCalibration(
+    const std::string& xml_filename)
+{
   std::vector<visensor::ViCameraCalibration> output_vector;
   boost::property_tree::ptree calibration_tree;
 
-  if (!loadPropertyTree(xml_filename, calibration_tree) ) {
+  if (!loadPropertyTree(xml_filename, &calibration_tree)) {
     exit(1);
   }
 
-  BOOST_FOREACH(const boost::property_tree::ptree::value_type & iter, calibration_tree.get_child("") ) {
+  BOOST_FOREACH(const boost::property_tree::ptree::value_type & iter, calibration_tree.get_child("") ){
     visensor::ViCameraCalibration calibration(visensor::ViCameraLensModel::LensModelTypes::RADIAL,
-                                              visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE);
+        visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE);
     std::vector<std::string> elements;
     boost::split(elements, iter.first, boost::is_any_of("_"));
 
@@ -745,7 +689,8 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
         calibration.cam_id_ = std::stoi(elements[1]);
         calibration.slot_id_ = std::stoi(elements[2])/2;
         calibration.is_flipped_ = std::stoi(elements[2])%2;
-        calibration.resolution_ = {752, 480};
+        calibration.resolution_[0] = 752;
+        calibration.resolution_[1] = 480;
         //build childtree name
         std::string cam_id_str = boost::lexical_cast<std::string>(calibration.cam_id_);
         std::string slot_str = boost::lexical_cast<std::string>(std::stoi(elements[2]));
@@ -780,7 +725,7 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
         calibration.t_[1] = calibration_tree.get<double>(child_tree + "t1");
         calibration.t_[2] = calibration_tree.get<double>(child_tree + "t2");
 
-      } catch(std::exception const&  ex)
+      } catch(std::exception const& ex)
       {
         std::cout << "failed.\n";
         std::cout << "Exception: " << ex.what() << "\n";
@@ -792,58 +737,59 @@ std::vector<visensor::ViCameraCalibration>  SensorUpdater::parseXmlCameraCalibra
   return output_vector;
 }
 
-bool SensorUpdater::convertCalibration() {
+bool SensorUpdater::convertCalibration()
+{
+
   if (!is_ssh_initialized_){
-    std::cout << "ssh is not initialize" << std::endl;
+    std::cout << "ssh is not initialized" << std::endl;
     return false;
   }
   visensor::ViSensorConfiguration::Ptr config_server = boost::make_shared<visensor::ViSensorConfiguration>(pFile_transfer_);
 
-  std::cout << "Convert calibration to new format ... ";
+  std::cout << "Convert calibration to new format: ";
 
-
-
-  // try to load existing configuration already saved in the new format
-  if (!config_server->loadConfig()) {
-    std::cout <<  "...\n"
-        << "no new configurations were found, assume that the sensor has no" << std::endl;
-    std::cout <<  "set new default parameters ... " ;
-  }
-
+  std::cout << "Try to load old config... ";
   std::string tmp_calibration_filename("/tmp/calibration.xml");
   if (!loadXmlCameraCalibrationFile(tmp_calibration_filename)) {
-    std::cout <<  "no calibration file was found, assume that the sensor is not yet calibrate" << std::endl;
+    std::cout << "failed.\n" << std::endl;
+    std::cout << "no calibration file was found, assume that the sensor is not yet calibrate" << std::endl;
     std::cout << std::endl;
     return checkConfiguration(config_server);
   }
+  std::cout << "done." << std::endl;
 
-
-  if (!checkConfiguration(config_server)){
-    return false;
+  std::cout << "Load new configuration in case the conversation is done multiple time... ";
+  // try to load existing configuration already saved in the new format
+  try {
+    if (!config_server->loadConfig()) {
+      std::cout << "ignore" << std::endl
+                << "no new configurations were found, assume that the sensor has none" << std::endl;
+    } else {
+      std::cout << "done." << std::endl;
+    }
+  } catch (visensor::exceptions const &ex) {
+    std::cout << "ignore" << std::endl
+              << "no new configurations were found, assume that the sensor has none" << std::endl;
+    std::cout << "Exception was: " << ex.what() << std::endl;
   }
 
-  std::vector<visensor::ViCameraCalibration> calibration_list = parseXmlCameraCalibration(tmp_calibration_filename);
+  std::cout << "Convert calibration to new format ... ";
+  std::vector<visensor::ViCameraCalibration> calibration_list =
+      parseXmlCameraCalibration(tmp_calibration_filename);
   if (calibration_list.size() == 0) {
     std::cout << "failed\n";
-    std::cout <<  "no calibration were found" << std::endl;
+    std::cout << "no calibrations were found" << std::endl;
     exit(1);
   }
   try {
     for (std::vector<visensor::ViCameraCalibration>::iterator it = calibration_list.begin();
         it != calibration_list.end(); ++it) {
-      config_server->cleanCameraCalibration(static_cast<visensor::SensorId::SensorId>(it->cam_id_),
-                                            it->slot_id_, it->is_flipped_,
-                                            visensor::ViCameraLensModel::LensModelTypes::UNKNOWN,
-                                            visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN);
-
       config_server->setCameraCalibration(*it);
     }
     config_server->saveConfig();
-  }
-  catch (visensor::exceptions const &ex) {
-    std::cout <<  "failed" << std::endl
-        << "Setting of the new calibration failed!" << std::endl;
-    std::cout <<  "Exception was: " << ex.what() << std::endl;
+  } catch (visensor::exceptions const &ex) {
+    std::cout << "failed" << std::endl << "Setting of the new calibration failed!" << std::endl;
+    std::cout << "Exception was: " << ex.what() << std::endl;
     exit(1);
   }
   std::cout << "done." << std::endl;
@@ -874,8 +820,9 @@ bool SensorUpdater::checkConfiguration(visensor::ViSensorConfiguration::Ptr& con
   return true;
 }
 
-bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList new_list) {
-
+bool SensorUpdater::checkCalibrationConvertion(const VersionList& old_list,
+                                               const VersionList& new_list)
+{
   VersionEntry linux_embedded_entry;
   VersionEntry version_of_cali_change(2,0,0);
   //check if the calibration need to be converted
@@ -885,11 +832,10 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
       std::cerr << "Could not convert calibration to new format" << std::endl;
       return false;
     }
-  }
-  else {
+  } else {
     size_t i;
     for (i = 0; i < old_list.size(); i++) {
-      if (old_list[i].package_name == "visensor-linux-embedded" ) {
+      if (old_list[i].package_name == "visensor-linux-embedded") {
         break;
       }
     }
@@ -897,7 +843,8 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
       std::cerr << "could not found linux embedded version" << std::endl;
       return false;
     }
-    if ( (old_list[i] < version_of_cali_change) && ( (new_list[i] > version_of_cali_change) || (new_list[i] == version_of_cali_change))) {
+    if ((old_list[i] < version_of_cali_change)
+        && ((new_list[i] > version_of_cali_change) || (new_list[i] == version_of_cali_change))) {
       if (!convertCalibration()) {
         std::cerr << "could not convert calibration to new format" << std::endl;
         return false;
@@ -905,13 +852,12 @@ bool SensorUpdater::checkCalibrationConvertion(VersionList old_list, VersionList
     }
   }
   return true;
-
 }
 
 bool SensorUpdater::checkRepo(REPOS &repo) {
   // check if fpga version is supported
   VersionEntry fpga_version;
-  if ((this->*(possible_pkgs_.at("visensor-fpga-bitstream")))(fpga_version, "visensor-fpga-bitstream") ) {
+  if ((this->*(possible_pkgs_.at("visensor-fpga-bitstream")))(&fpga_version, "visensor-fpga-bitstream") ) {
     if (fpga_version.sensor_type != SUPPORTED_FPGA_CONFIGS::NORMAL) {
       std::cout << "Please use the manual update. The update tool does not support your FPGA configuration" << std::endl;
       return false;
@@ -955,7 +901,7 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
   VersionList currentList;
   std::string localPath = std::string("/tmp/");
 
-  if(!getVersionInstalled(currentList)) {
+  if(!getVersionInstalled(&currentList)) {
     std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
     return false;
   }
@@ -964,7 +910,7 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
     return false;
   }
 
-  if(!getUpdateList(list, requestedVersionList, repo)) {
+  if(!getUpdateList(&list, requestedVersionList, repo)) {
     return false;
   }
 
@@ -993,7 +939,7 @@ bool SensorUpdater::sensorDownloadTo(REPOS &repo, const std::string path, const 
   VersionList list;
   VersionList currentList;
 
-  if(!getUpdateList(list, requestedVersionList, repo)) {
+  if(!getUpdateList(&list, requestedVersionList, repo)) {
     return false;
   }
 
@@ -1010,15 +956,14 @@ bool SensorUpdater::sensorUploadFrom(const std::string path) {
   VersionList list;
   VersionList currentList;
 
-  if(!getVersionInstalled(currentList)) {
+  if(!getVersionInstalled(&currentList)) {
     std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
     return false;
   }
 
-  if(!getVersionsFromLocalPath(list, path)) {
+  if(!getVersionsFromLocalPath(&list, path)) {
     return false;
   }
-
   if (!checkCalibrationConvertion(currentList, list)) {
     return false;
   }
@@ -1030,6 +975,5 @@ bool SensorUpdater::sensorUploadFrom(const std::string path) {
   if(!installPackagesFromPath(list, path)) {
     return false;
   }
-
   return true;
 }
