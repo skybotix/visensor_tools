@@ -62,7 +62,7 @@ bool cmdDelete(ros::NodeHandle& nh, std::string& target_name, std::vector<std::s
   visensor::SensorId::SensorId cam_id = static_cast<visensor::SensorId::SensorId>(std::stoi(
       args.at(0)));
   int slot_id = std::stoi(args.at(1));
-  bool is_flipped = std::stoi(args.at(0)) == 1;
+  bool is_flipped = (std::stoi(args.at(2)) == 1);
   visensor::ViCameraProjectionModel::ProjectionModelTypes projection_type;
   visensor::ViCameraLensModel::LensModelTypes lens_model_type;
   if (args.at(3) == "pinhole") {
