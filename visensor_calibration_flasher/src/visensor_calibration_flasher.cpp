@@ -106,7 +106,7 @@ bool CalibrationFlasher::addCalibration(const YAML::Node& config, const int slot
       int cam_id = std::stoi(it->first.as<std::string>().substr(3, std::string::npos));
       std::cout << "found camera calibration for cam " << cam_id << std::endl;
       visensor::ViCameraCalibration camera_calibration;
-      if (!parseCameraCalibration(it->second, camera_calibration))
+      if (!parseCameraCalibration(it->second, &camera_calibration))
         return false;
 
       camera_calibration.cam_id_ = cam_id;
@@ -140,7 +140,7 @@ bool CalibrationFlasher::addCalibration(const YAML::Node& config, const int slot
   return true;
 }
 bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
-                                                visensor::ViCameraCalibration& camera_calibration)
+                                                visensor::ViCameraCalibration* camera_calibration)
 {
   YAML::Node resolution;
   YAML::Node T_C_I;
@@ -157,34 +157,34 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
   assert(cam_params["T_cam_imu"]);
 
   if (cam_params["flip_camera"]) {
-    camera_calibration.is_flipped_ = cam_params["flip_camera"].as<bool>();
+    camera_calibration->is_flipped_ = cam_params["flip_camera"].as<bool>();
   } else {
-    camera_calibration.is_flipped_ = true;
+    camera_calibration->is_flipped_ = true;
   }
   T_C_I = cam_params["T_cam_imu"];
   //EIGEN USES COLUMN MAJOR ORDER!
-  camera_calibration.R_.resize(9);
-  camera_calibration.R_.at(0) = T_C_I[0][0].as<double>();
-  camera_calibration.R_.at(3) = T_C_I[0][1].as<double>();
-  camera_calibration.R_.at(6) = T_C_I[0][2].as<double>();
-  camera_calibration.R_.at(1) = T_C_I[1][0].as<double>();
-  camera_calibration.R_.at(4) = T_C_I[1][1].as<double>();
-  camera_calibration.R_.at(7) = T_C_I[1][2].as<double>();
-  camera_calibration.R_.at(2) = T_C_I[2][0].as<double>();
-  camera_calibration.R_.at(5) = T_C_I[2][1].as<double>();
-  camera_calibration.R_.at(8) = T_C_I[2][2].as<double>();
+  camera_calibration->R_.resize(9);
+  camera_calibration->R_.at(0) = T_C_I[0][0].as<double>();
+  camera_calibration->R_.at(3) = T_C_I[0][1].as<double>();
+  camera_calibration->R_.at(6) = T_C_I[0][2].as<double>();
+  camera_calibration->R_.at(1) = T_C_I[1][0].as<double>();
+  camera_calibration->R_.at(4) = T_C_I[1][1].as<double>();
+  camera_calibration->R_.at(7) = T_C_I[1][2].as<double>();
+  camera_calibration->R_.at(2) = T_C_I[2][0].as<double>();
+  camera_calibration->R_.at(5) = T_C_I[2][1].as<double>();
+  camera_calibration->R_.at(8) = T_C_I[2][2].as<double>();
 
-  camera_calibration.t_.resize(3);
-  camera_calibration.t_.at(0) = T_C_I[0][3].as<double>();
-  camera_calibration.t_.at(1) = T_C_I[1][3].as<double>();
-  camera_calibration.t_.at(2) = T_C_I[2][3].as<double>();
+  camera_calibration->t_.resize(3);
+  camera_calibration->t_.at(0) = T_C_I[0][3].as<double>();
+  camera_calibration->t_.at(1) = T_C_I[1][3].as<double>();
+  camera_calibration->t_.at(2) = T_C_I[2][3].as<double>();
 
   distortion_model = cam_params["distortion_model"].as<std::string>();
   distortion_coeffs = cam_params["distortion_coeffs"];
   if (distortion_model == std::string("radtan")) {
-    camera_calibration.lens_model_ = std::make_shared<visensor::ViCameraLensModelRadial>();
+    camera_calibration->lens_model_ = std::make_shared<visensor::ViCameraLensModelRadial>();
     visensor::ViCameraLensModelRadial::Ptr lens_model =
-        camera_calibration.getLensModel<visensor::ViCameraLensModelRadial>();
+        camera_calibration->getLensModel<visensor::ViCameraLensModelRadial>();
 
     if (static_cast<unsigned int>(distortion_coeffs.size())
         < lens_model->getCoefficients().size()) {
@@ -196,9 +196,9 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
     lens_model->r1_ = distortion_coeffs[2].as<double>();
     lens_model->r2_ = distortion_coeffs[3].as<double>();
   } else if (distortion_model == std::string("equidistant")) {
-    camera_calibration.lens_model_ = std::make_shared<visensor::ViCameraLensModelEquidistant>();
+    camera_calibration->lens_model_ = std::make_shared<visensor::ViCameraLensModelEquidistant>();
     visensor::ViCameraLensModelEquidistant::Ptr lens_model =
-        camera_calibration.getLensModel<visensor::ViCameraLensModelEquidistant>();
+        camera_calibration->getLensModel<visensor::ViCameraLensModelEquidistant>();
 
     if (static_cast<unsigned int>(distortion_coeffs.size())
         < lens_model->getCoefficients().size()) {
@@ -218,9 +218,9 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
   camera_model = cam_params["camera_model"].as<std::string>();
   intrinsics = cam_params["intrinsics"];
   if (camera_model == std::string("pinhole")) {
-      camera_calibration.projection_model_ = std::make_shared<visensor::ViCameraProjectionModelPinhole>();
+      camera_calibration->projection_model_ = std::make_shared<visensor::ViCameraProjectionModelPinhole>();
       visensor::ViCameraProjectionModelPinhole::Ptr projection_model =
-          camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
+          camera_calibration->getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
 
     if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
       std::cerr
@@ -232,9 +232,9 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
     projection_model->principal_point_u_ = intrinsics[2].as<double>();
     projection_model->principal_point_v_ = intrinsics[3].as<double>();
   } else if (camera_model == std::string("omnidirectional")) {
-    camera_calibration.projection_model_ = std::make_shared<visensor::ViCameraProjectionModelOmnidirectional>();
+    camera_calibration->projection_model_ = std::make_shared<visensor::ViCameraProjectionModelOmnidirectional>();
     visensor::ViCameraProjectionModelOmnidirectional::Ptr projection_model =
-        camera_calibration.getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
+        camera_calibration->getProjectionModel<visensor::ViCameraProjectionModelOmnidirectional>();
 
     if (static_cast<unsigned int>(intrinsics.size()) < projection_model->getCoefficients().size()) {
       std::cerr
@@ -251,8 +251,8 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
     return false;
   }
   resolution = cam_params["resolution"];
-  camera_calibration.resolution_[0] = resolution[0].as<int>();
-  camera_calibration.resolution_[1] = resolution[1].as<int>();
+  camera_calibration->resolution_[0] = resolution[0].as<int>();
+  camera_calibration->resolution_[1] = resolution[1].as<int>();
   return true;
 }
 
@@ -262,7 +262,7 @@ bool CalibrationFlasher::deleteCalibration(
     const visensor::ViCameraLensModel::LensModelTypes lens_model_type)
 {
   if (slot_id <= 0) {
-    std::cout << "Your going to delete the factory calibration. Do you want proceed? [y/n]: "
+    std::cout << "\nYour going to delete the factory calibration. Do you want proceed? [y/n]: "
         << std::endl;
 
     std::string input;
