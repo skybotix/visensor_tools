@@ -62,13 +62,16 @@ bool cmdDelete(ros::NodeHandle& nh, std::string& target_name, std::vector<std::s
   visensor::SensorId::SensorId cam_id = static_cast<visensor::SensorId::SensorId>(std::stoi(
       args.at(0)));
   int slot_id = std::stoi(args.at(1));
-  bool is_flipped = (std::stoi(args.at(2)) == 1);
+  int is_flipped = std::stoi(args.at(2));
+
   visensor::ViCameraProjectionModel::ProjectionModelTypes projection_type;
   visensor::ViCameraLensModel::LensModelTypes lens_model_type;
   if (args.at(3) == "pinhole") {
     projection_type = visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE;
   } else if (args.at(3) == "omnidirectional") {
     projection_type = visensor::ViCameraProjectionModel::ProjectionModelTypes::OMNIDIRECTIONAL;
+  } else if (args.at(3) == "unknown") {
+    projection_type = visensor::ViCameraProjectionModel::ProjectionModelTypes::UNKNOWN;
   } else {
     ROS_WARN("Projection Model not defined. Use either pinhole or omnidirectional.\n");
     return false;
@@ -78,6 +81,8 @@ bool cmdDelete(ros::NodeHandle& nh, std::string& target_name, std::vector<std::s
     lens_model_type = visensor::ViCameraLensModel::LensModelTypes::RADIAL;
   } else if (args.at(4) == "equidistant") {
     lens_model_type = visensor::ViCameraLensModel::LensModelTypes::EQUIDISTANT;
+  } else if (args.at(3) == "unknown") {
+    lens_model_type = visensor::ViCameraLensModel::LensModelTypes::UNKNOWN;
   } else {
     ROS_WARN("Lens Model not defined. Use either radial or equidistant.\n");
     return false;
