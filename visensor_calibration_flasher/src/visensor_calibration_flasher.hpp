@@ -26,7 +26,7 @@ class CalibrationFlasher
       const visensor::ViCameraProjectionModel::ProjectionModelTypes projection_model_type,
       const visensor::ViCameraLensModel::LensModelTypes lens_model_type);
   bool parseCameraCalibration(const YAML::Node& cam_params,
-                              visensor::ViCameraCalibration& camera_calibration);
+                              visensor::ViCameraCalibration* camera_calibration);
   bool addCalibration(const YAML::Node& cam_params, const int slot_id);
 
  private:
