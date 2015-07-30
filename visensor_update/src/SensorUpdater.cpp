@@ -966,8 +966,7 @@ bool SensorUpdater::sensorUploadFrom(const std::string path) {
     return false;
   }
 
-  // try to convert calibration in anycase
-
+  // try to convert calibration in any case
   std::cout << "Try to copy possible available calibration ... " << std::endl;
   if (!convertCalibration()) {
     std::cerr << "Could not convert calibration to new format" << std::endl;
