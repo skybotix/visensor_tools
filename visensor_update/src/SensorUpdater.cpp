@@ -486,23 +486,25 @@ bool SensorUpdater::sensorSetMountRW(bool RW)
   return true;
 }
 
+
 /* clean all installed packages on the sensor with the given prefix */
 bool SensorUpdater::sensorClean(void)
 {
-  VersionList listSensor;
-
+  VersionList listToClean;
   // get all the installed packages with the given prefix
-  bool success = getVersionInstalled(&listSensor);
+  getVersionInstalled(&listToClean);
 
-  if (!success) {
-    std::cout << "Error: could not get installed versions from sensor!\n";
-    return false;
-  }
+  return sensorClean(listToClean);
+}
 
+/* clean all installed packages on the sensor with the given prefix */
+bool SensorUpdater::sensorClean(VersionList listToClean)
+{
+  bool success;
   // remove package after package
-  for (size_t i = 0; i < listSensor.size(); i++) {
-    std::cout << "Removing " << listSensor[i].package_name << " from Sensor ... ";
-    success = sensorRemoveDeb(listSensor[i].package_name);
+  for (size_t i = 0; i < listToClean.size(); i++) {
+    std::cout << "Removing " << listToClean[i].package_name << " from Sensor ... ";
+    success = sensorRemoveDeb(listToClean[i].package_name);
     if (success)
       std::cout << "done.\n";
     else
@@ -793,7 +795,7 @@ bool SensorUpdater::convertCalibration()
     checkConfiguration(config_server);
     return false;
   }
-  std::cout << "done." << std::endl;
+  std::cout << "done." << std::endl << std::endl;
 
   return checkConfiguration(config_server);
 }
@@ -828,7 +830,7 @@ bool SensorUpdater::checkCalibrationConvertion(const VersionList& old_list,
   VersionEntry version_of_cali_change(2,0,0);
   //check if the calibration need to be converted
   if (old_list.size() == 0) {
-    std::cout << "Try to copy possible available calibration ... ";
+    std::cout << "Try to copy possible available calibration ... " << std::endl;
     if (!convertCalibration()) {
       std::cerr << "Could not convert calibration to new format" << std::endl;
       return false;
@@ -923,7 +925,7 @@ bool SensorUpdater::sensorUpdate(REPOS &repo, const VersionList& requestedVersio
     return false;
   }
 
-  if(!sensorClean()) {
+  if(!sensorClean(list)) {
     return false;
   }
 
@@ -957,22 +959,25 @@ bool SensorUpdater::sensorUploadFrom(const std::string path) {
   VersionList list;
   VersionList currentList;
 
-  if(!getVersionInstalled(&currentList)) {
-    std::cout << "No ViSensor packages were installed on the sensor. Please check your settings or flash your sensor manualy" << std::endl;
+  getVersionInstalled(&currentList);
+
+  if(!getVersionsFromLocalPath(&list, path) || (list.size() == 0)) {
+    std::cerr << "no binaries were found." << std::endl << std::endl;
     return false;
   }
 
-  if(!getVersionsFromLocalPath(&list, path)) {
-    return false;
+  // try to convert calibration in anycase
+
+  std::cout << "Try to copy possible available calibration ... " << std::endl;
+  if (!convertCalibration()) {
+    std::cerr << "Could not convert calibration to new format" << std::endl;
   }
-  if (!checkCalibrationConvertion(currentList, list)) {
+
+  if(!sensorClean(list)) {
     return false;
   }
 
-  if(!sensorClean()) {
-    return false;
-  }
-  // update to newest version
+  // update to saved version
   if(!installPackagesFromPath(list, path)) {
     return false;
   }
