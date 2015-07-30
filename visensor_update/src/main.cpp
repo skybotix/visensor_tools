@@ -290,7 +290,7 @@ bool cmdDownloadTo(SensorUpdater& updater, std::string& target_name, std::vector
       printArgs();
       return false;
     }
-    repository = SensorUpdater::REPOS::REPO_RELEASE;
+    repository = arg_repos.at(arg_repo);
   }
   else {
     // print help
@@ -336,7 +336,7 @@ bool cmdDownloadDevelTo(SensorUpdater& updater, std::string& target_name, std::v
       printArgs();
       return false;
     }
-    repository = SensorUpdater::REPOS::REPO_DEV;
+    repository =  arg_repos.at(arg_repo);
   }
   else {
     // print help
