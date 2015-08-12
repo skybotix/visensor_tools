@@ -257,7 +257,7 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
 }
 
 bool CalibrationFlasher::deleteCalibration(
-    const visensor::SensorId::SensorId cam_id, const int slot_id, const bool is_flipped,
+    const visensor::SensorId::SensorId cam_id, const int slot_id, const int is_flipped,
     const visensor::ViCameraProjectionModel::ProjectionModelTypes projection_model_type,
     const visensor::ViCameraLensModel::LensModelTypes lens_model_type)
 {
