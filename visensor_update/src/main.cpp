@@ -148,7 +148,7 @@ bool cmdUpdateFrom(SensorUpdater& updater, std::string& target_name, std::vector
   updater.printVersionsInstalled();
 
   /* install the downloaded version */
-  std::cout << "Installing packages from: " << path << std::endl << std::endl;
+  std::cout << "Installing packages from: " << path << std::endl;
   bool success = updater.sensorUploadFrom(path);
 
   /* print version before update */
