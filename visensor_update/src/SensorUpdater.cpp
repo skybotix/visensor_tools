@@ -679,7 +679,7 @@ std::vector<visensor::ViCameraCalibration> SensorUpdater::parseXmlCameraCalibrat
   }
 
   BOOST_FOREACH(const boost::property_tree::ptree::value_type & iter, calibration_tree.get_child("") ){
-    visensor::ViCameraCalibration calibration(visensor::ViCameraLensModel::LensModelTypes::RADIAL,
+    visensor::ViCameraCalibration calibration(visensor::ViCameraLensModel::LensModelTypes::RADTAN,
         visensor::ViCameraProjectionModel::ProjectionModelTypes::PINHOLE);
     std::vector<std::string> elements;
     boost::split(elements, iter.first, boost::is_any_of("_"));
@@ -698,7 +698,7 @@ std::vector<visensor::ViCameraCalibration> SensorUpdater::parseXmlCameraCalibrat
         std::string child_tree = std::string("cam_") + cam_id_str + std::string("_") + slot_str + std::string(".");
 
         //load data
-        visensor::ViCameraLensModelRadial::Ptr lens_model = calibration.getLensModel<visensor::ViCameraLensModelRadial>();
+        visensor::ViCameraLensModelRadtan::Ptr lens_model = calibration.getLensModel<visensor::ViCameraLensModelRadtan>();
         visensor::ViCameraProjectionModelPinhole::Ptr projection_model = calibration.getProjectionModel<visensor::ViCameraProjectionModelPinhole>();
         projection_model->focal_length_u_ = calibration_tree.get<double>(child_tree + "fu");
         projection_model->focal_length_v_ = calibration_tree.get<double>(child_tree + "fv");

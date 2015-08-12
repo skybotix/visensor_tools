@@ -182,9 +182,9 @@ bool CalibrationFlasher::parseCameraCalibration(const YAML::Node& cam_params,
   distortion_model = cam_params["distortion_model"].as<std::string>();
   distortion_coeffs = cam_params["distortion_coeffs"];
   if (distortion_model == std::string("radtan")) {
-    camera_calibration->lens_model_ = std::make_shared<visensor::ViCameraLensModelRadial>();
-    visensor::ViCameraLensModelRadial::Ptr lens_model =
-        camera_calibration->getLensModel<visensor::ViCameraLensModelRadial>();
+    camera_calibration->lens_model_ = std::make_shared<visensor::ViCameraLensModelRadtan>();
+    visensor::ViCameraLensModelRadtan::Ptr lens_model =
+        camera_calibration->getLensModel<visensor::ViCameraLensModelRadtan>();
 
     if (static_cast<unsigned int>(distortion_coeffs.size())
         < lens_model->getCoefficients().size()) {
