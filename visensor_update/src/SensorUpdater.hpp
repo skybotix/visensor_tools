@@ -163,6 +163,7 @@ class SensorUpdater {
   bool sensorRemoveDeb(const std::string& package_name);
 
   bool sensorClean(void);
+  bool sensorClean(VersionList listToClean);
   bool sensorReboot(void) const;
   bool sensorSetMountRW(bool RW);
 
@@ -172,6 +173,7 @@ class SensorUpdater {
   bool sensorDownloadTo(REPOS &repo, const std::string path, const VersionList& requestedVersionList);
   bool sensorUploadFrom(const std::string path);
   bool checkRepo(REPOS &repo);
+
  private:
   visensor::SshConnection::Ptr pSsh_; //ssh connection to sensor
   visensor::FileTransfer::Ptr pFile_transfer_; //class for the file transfer to the sensor
