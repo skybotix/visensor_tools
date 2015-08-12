@@ -77,14 +77,14 @@ bool cmdDelete(ros::NodeHandle& nh, std::string& target_name, std::vector<std::s
     return false;
   }
 
-  if (args.at(4) == "radial") {
-    lens_model_type = visensor::ViCameraLensModel::LensModelTypes::RADIAL;
+  if (args.at(4) == "radtan") {
+    lens_model_type = visensor::ViCameraLensModel::LensModelTypes::RADTAN;
   } else if (args.at(4) == "equidistant") {
     lens_model_type = visensor::ViCameraLensModel::LensModelTypes::EQUIDISTANT;
   } else if (args.at(3) == "unknown") {
     lens_model_type = visensor::ViCameraLensModel::LensModelTypes::UNKNOWN;
   } else {
-    ROS_WARN("Lens Model not defined. Use either radial or equidistant.\n");
+    ROS_WARN("Lens Model not defined. Use either radtan or equidistant.\n");
     return false;
   }
 
