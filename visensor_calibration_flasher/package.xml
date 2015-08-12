@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>visensor_calibration_flasher</name>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
   <description>Flashes the VI Sensor given a Kalibr calibration file</description>
   <maintainer email="sammy.omari@skybotix.com">Sammy Omari</maintainer>
   <license>BSD</license>
