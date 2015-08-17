@@ -762,12 +762,8 @@ bool SensorUpdater::convertCalibration()
   std::cout << "Load new configuration in case the conversation is done multiple time... ";
   // try to load existing configuration already saved in the new format
   try {
-    if (!config_server->loadConfig()) {
-      std::cout << "ignore" << std::endl
-                << "no new configurations were found, assume that the sensor has none" << std::endl;
-    } else {
-      std::cout << "done." << std::endl;
-    }
+    config_server->loadConfig();
+    std::cout << "done." << std::endl;
   } catch (visensor::exceptions const &ex) {
     std::cout << "ignore" << std::endl
               << "no new configurations were found, assume that the sensor has none" << std::endl;
