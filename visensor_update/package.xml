@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>visensor_update</name>
-  <version>1.4.4</version>
+  <version>1.4.5</version>
   <description>Loads the newest version from the Internet to the sensor</description>
   <url>http://www.skybotix.com</url>
   <author>Thomas Schneider, Fabio Diem, Lukas Schmid</author>
