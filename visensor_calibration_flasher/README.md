@@ -23,7 +23,7 @@ You can now upload the new calibration to the VI-Sensor
 
 **Please note that you will overwrite the factory calibration**:
 ```
-roslaunch visensor_calibration_flasher flash_sensor.launch
+rosrun visensor_calibration_flasher visensor_calibration_flasher 10.0.0.1 add ~/camchain.yaml 0
 ```
 If you get a *Calibration upload succeeded!*, everything went smoothly. You can test the new calibration by starting the block-matcher launch file of the visensor_node. If you managed to flash your sensor incidentally, but still want the factory calibration, contact support@skybotix.com .
 ```
